@@ -15,6 +15,8 @@ export type RentalApplicationStatus =
   | 'signed'
 
 export type SaleLeadStatus = 'new' | 'contacted' | 'viewing_booked' | 'follow_up' | 'closed'
+export type QueueMembershipStatus = 'inactive' | 'active' | 'paused' | 'cancelled' | 'expired'
+export type SubscriptionStatus = 'pending' | 'active' | 'paused' | 'past_due' | 'cancelled' | 'expired'
 
 export type SearchFilters = {
   mode?: ListingType
@@ -80,4 +82,51 @@ export type AreaHighlight = {
 export type StatItem = {
   value: string
   label: string
+}
+
+export type CoApplicantItem = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  relationship: string | null
+  createdAt: string
+}
+
+export type ProfileDocumentItem = {
+  id: string
+  fileName: string
+  fileUrl: string
+  documentType: string
+  createdAt: string
+}
+
+export type QueueMembershipItem = {
+  id: string
+  status: QueueMembershipStatus
+  joinedQueueAt: string
+  currentPoints: number
+  monthsInQueue: number
+  nextBillingAt: string | null
+  subscriptionStatus: SubscriptionStatus | null
+}
+
+export type DashboardProfileItem = {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  phone: string
+  role: string
+  city: string
+  householdSize: number | null
+  hasPets: boolean
+  employmentStatus: string
+  employerName: string
+  monthlyIncome: number | null
+  desiredMoveIn: string | null
+  desiredLocations: string[]
+  coApplicants: CoApplicantItem[]
+  documents: ProfileDocumentItem[]
+  queueMembership: QueueMembershipItem | null
 }
