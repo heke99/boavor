@@ -1,39 +1,35 @@
 export type ListingType = 'rent' | 'sale'
+export type SavedSearchMode = 'all' | 'rent' | 'sale'
+
 export type PropertyType = 'apartment' | 'house' | 'property'
+export type AppRole =
+  | 'seeker'
+  | 'buyer'
+  | 'landlord'
+  | 'broker'
+  | 'company_admin'
+  | 'admin'
+  | 'super_admin'
+
 export type ListingStatus = 'draft' | 'published' | 'paused' | 'rented' | 'sold' | 'archived'
-export type SavedSearchMode = 'rent' | 'sale' | 'all'
-export type AppRole = 'seeker' | 'buyer' | 'landlord' | 'broker' | 'company_admin' | 'admin' | 'super_admin'
+export type RentalApplicationStatus =
+  | 'submitted'
+  | 'reviewing'
+  | 'shortlisted'
+  | 'offered'
+  | 'rejected'
+  | 'withdrawn'
+
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired' | 'trialing'
+
 export type CompanyType =
-  | 'private_landlord'
   | 'landlord_company'
   | 'brokerage'
   | 'housing_association'
   | 'property_owner'
-  | 'other'
-export type LegalForm = 'ab' | 'enskild_firma' | 'hb' | 'kb' | 'ideell_forening' | 'privatperson' | 'other'
-export type RentalApplicationStatus =
-  | 'draft'
-  | 'submitted'
-  | 'received'
-  | 'reviewing'
-  | 'qualified'
-  | 'reserve'
-  | 'viewing'
-  | 'offered'
-  | 'rejected'
-  | 'signed'
+  | 'private_landlord'
 
-export type SaleLeadStatus = 'new' | 'contacted' | 'viewing_booked' | 'follow_up' | 'closed'
-export type QueueMembershipStatus = 'inactive' | 'active' | 'paused' | 'cancelled' | 'expired'
-export type SubscriptionStatus = 'pending' | 'active' | 'paused' | 'past_due' | 'cancelled' | 'expired'
-
-export type SearchFilters = {
-  mode?: ListingType
-  city?: string
-  rooms?: string
-  maxPrice?: string
-  propertyType?: string
-}
+export type LegalForm = 'ab' | 'enskild_firma' | 'hb' | 'kb' | 'private_person'
 
 export type ListingCardItem = {
   id: string
@@ -54,14 +50,6 @@ export type ListingCardItem = {
   isVerified?: boolean
 }
 
-export type RentalRequirements = {
-  minIncome: number | null
-  petsAllowed: boolean
-  smokingAllowed: boolean
-  referencesRequired: boolean
-  employmentRequired: boolean
-}
-
 export type ListingDetailItem = ListingCardItem & {
   description: string
   street: string | null
@@ -79,18 +67,39 @@ export type ListingDetailItem = ListingCardItem & {
     isCover: boolean
     position: number
   }>
-  rentalRequirements: RentalRequirements | null
+  rentalRequirements: {
+    minIncome: number | null
+    petsAllowed: boolean
+    smokingAllowed: boolean
+    referencesRequired: boolean
+    employmentRequired: boolean
+  } | null
 }
 
-export type AreaHighlight = {
-  name: string
-  count: string
-  description: string
+export type SearchFilters = {
+  mode?: ListingType
+  city?: string
+  rooms?: string
+  maxPrice?: string
+  propertyType?: string
 }
 
-export type StatItem = {
-  value: string
-  label: string
+export type FavoriteItem = {
+  id: string
+  createdAt: string
+  listing: ListingCardItem
+}
+
+export type SavedSearchItem = {
+  id: string
+  title: string
+  mode: SavedSearchMode
+  city: string | null
+  propertyType: PropertyType | null
+  minRooms: number | null
+  maxPrice: number | null
+  notificationsEnabled: boolean
+  createdAt: string
 }
 
 export type CoApplicantItem = {
@@ -111,8 +120,8 @@ export type ProfileDocumentItem = {
 }
 
 export type QueueMembershipItem = {
-  id: string
-  status: QueueMembershipStatus
+  id?: string
+  status: 'active' | 'paused' | 'cancelled' | 'expired'
   joinedQueueAt: string
   currentPoints: number
   monthsInQueue: number
@@ -150,20 +159,78 @@ export type DashboardProfileItem = {
   companies: CompanyMembershipItem[]
 }
 
-export type FavoriteItem = {
-  id: string
-  createdAt: string
-  listing: ListingCardItem
+export type ProfileFormValues = {
+  firstName: string
+  lastName: string
+  phone: string
+  role: AppRole
+  city: string
+  householdSize: number | null
+  hasPets: boolean
+  employmentStatus: string
+  employerName: string
+  monthlyIncome: number | null
+  desiredMoveIn: string | null
+  desiredLocations: string[]
 }
 
-export type SavedSearchItem = {
+export type RentalApplicationItem = {
   id: string
-  title: string
-  mode: SavedSearchMode
-  city: string | null
-  propertyType: PropertyType | null
-  minRooms: number | null
-  maxPrice: number | null
-  notificationsEnabled: boolean
+  status: RentalApplicationStatus
   createdAt: string
+  coverLetter: string | null
+  queuePointsSnapshot: number
+  queueJoinedAtSnapshot: string | null
+  listing: {
+    slug: string
+    title: string
+    city: string
+    listingType: ListingType
+    price: number
+    imageUrl: string | null
+  }
+  applicant: {
+    fullName: string
+    email: string
+    phone: string | null
+    monthlyIncome: number | null
+    householdSize: number | null
+  }
+  coApplicants: Array<{
+    fullName: string
+    email: string | null
+    phone: string | null
+    relationship: string | null
+  }>
+  documents: Array<{
+    fileName: string
+    fileUrl: string
+    documentType: string
+  }>
+}
+
+export type ManagedListingItem = {
+  id: string
+  slug: string
+  title: string
+  city: string
+  listingType: ListingType
+  propertyType: PropertyType
+  status: ListingStatus
+  price: number
+  rooms: number
+  areaSqm: number
+  createdAt: string
+  applicationsCount: number
+}
+
+export type AreaHighlight = {
+  name: string
+  count: string
+  description: string
+}
+
+export type StatItem = {
+  value: string
+  label: string
 }

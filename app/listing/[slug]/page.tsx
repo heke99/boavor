@@ -1,12 +1,11 @@
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { BadgeCheck, BedDouble, Ruler, MapPinned, CalendarClock, ShieldCheck } from 'lucide-react'
-import { getListingBySlug, getRelatedListings } from '@/lib/data/listings'
+import { getListingBySlug, filterListings } from '@/lib/search'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { Card } from '@/components/ui/Card'
-import { FavoriteButton } from '@/components/listings/FavoriteButton'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -14,13 +13,19 @@ type Props = {
 
 export default async function ListingDetailPage({ params }: Props) {
   const { slug } = await params
-  const listing = await getListingBySlug(slug)
+  const listing = getListingBySlug(slug)
 
   if (!listing) {
     notFound()
   }
 
-  const related = await getRelatedListings(listing, 3)
+  const related = filterListings({
+    mode: listing.listingType,
+    city: listing.city,
+  })
+    .filter((item) => item.slug !== listing.slug)
+    .slice(0, 3)
+
   const isRent = listing.listingType === 'rent'
 
   return (
@@ -28,13 +33,7 @@ export default async function ListingDetailPage({ params }: Props) {
       <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
           <div className="relative h-[420px] overflow-hidden rounded-[34px]">
-            <Image
-              src={listing.imageUrl}
-              alt={listing.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 66vw"
-              className="object-cover"
-            />
+            <Image src={listing.imageUrl} alt={listing.title} fill sizes="(max-width: 1024px) 100vw, 66vw" className="object-cover" />
           </div>
 
           <div className="mt-8">
@@ -46,9 +45,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <MapPinned size={15} />
               {listing.areaName}, {listing.city}
             </div>
-            <div className="mt-6 text-3xl font-semibold text-[var(--primary)]">
-              {formatCurrency(listing.price, isRent ? 'rent' : 'sale')}
-            </div>
+            <div className="mt-6 text-3xl font-semibold text-[var(--primary)]">{formatCurrency(listing.price, isRent ? 'rent' : 'sale')}</div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <Card className="p-4">
@@ -76,7 +73,9 @@ export default async function ListingDetailPage({ params }: Props) {
 
             <div className="mt-8 rounded-[30px] border border-black/8 bg-white p-6 shadow-[0_10px_30px_rgba(13,17,32,0.05)]">
               <h2 className="text-2xl font-semibold">Om bostaden</h2>
-              <p className="mt-4 text-base leading-8 text-[var(--muted)]">{listing.description}</p>
+              <p className="mt-4 text-base leading-8 text-[var(--muted)]">
+                Bovaro är nu byggd så att hyressökande kan skicka riktig ansökan med förifylld profil, medsökande, dokument och köpoäng som extra merit.
+              </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
                 {listing.features.map((feature) => (
@@ -98,25 +97,35 @@ export default async function ListingDetailPage({ params }: Props) {
             <div className="mt-4">
               <h2 className="text-2xl font-semibold">{isRent ? 'Ansök enkelt' : 'Anmäl intresse'}</h2>
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                Nu kan användaren spara objekt som favorit, och nästa steg blir att koppla ansökan och lead-flöden fullt ut.
+                {isRent
+                  ? 'Ansök med din sparade profil. Köpoäng följer med som extra signal till hyresvärden.'
+                  : 'Säljes-flödet kan byggas ut med leads i nästa steg.'}
               </p>
             </div>
             <div className="mt-6 space-y-3">
-              <Button className="w-full">{isRent ? 'Ansök om bostaden' : 'Skicka intresseanmälan'}</Button>
-              <FavoriteButton listingId={listing.id} />
+              {isRent ? (
+                <Button href={`/listing/${listing.slug}/apply`} className="w-full">
+                  Ansök om bostaden
+                </Button>
+              ) : (
+                <Button className="w-full">Skicka intresseanmälan</Button>
+              )}
+              <Button href="/dashboard/favorites" variant="ghost" className="w-full border border-black/8">
+                Spara som favorit
+              </Button>
             </div>
           </Card>
 
           <Card className="p-6">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--secondary)]">
               <BadgeCheck size={16} />
-              Vad som nu är på riktigt
+              Vad hyresvärden ser
             </div>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-              <li>• Favoriter sparas i databasen</li>
-              <li>• Sparade sökningar sparas i databasen</li>
-              <li>• Roller stödjer hyresgäst, köpare, hyresvärd, bolag, admin och superadmin</li>
-              <li>• Hyresvärd via aktiebolag eller annat bolag är nu förberett i modellen</li>
+              <li>• Din profil med hushåll, arbete och inkomst</li>
+              <li>• Valda medsökande och dokument</li>
+              <li>• Köpoäng som extra merit, inte som tvingande regel</li>
+              <li>• Statusflöde direkt i annonsörsportalen</li>
             </ul>
           </Card>
         </div>

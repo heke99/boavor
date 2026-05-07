@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { LayoutDashboard, UserCircle2, Heart, SearchCheck, Building2 } from 'lucide-react'
+import { LayoutDashboard, UserCircle2, Heart, SearchCheck, Building2, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', label: 'Översikt', icon: LayoutDashboard },
   { href: '/dashboard/profile', label: 'Min profil', icon: UserCircle2 },
+  { href: '/dashboard/applications', label: 'Ansökningar', icon: FileText },
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
   { href: '/dashboard/saved-searches', label: 'Sparade sökningar', icon: SearchCheck },
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
@@ -28,7 +29,7 @@ export function DashboardShell({
           <div className="mb-4 rounded-[22px] bg-[linear-gradient(135deg,var(--primary),#7c67ff)] p-5 text-white">
             <div className="text-sm text-white/80">Bovaro workspace</div>
             <div className="mt-2 text-xl font-semibold">Redo för nästa steg</div>
-            <div className="mt-2 text-sm text-white/80">Här samlar du profil, favoriter, sparade sökningar och objekt.</div>
+            <div className="mt-2 text-sm text-white/80">Här samlar du profil, ansökningar, favoriter, sparade sökningar och objekt.</div>
           </div>
           <nav className="space-y-1">
             {navItems.map((item) => {
