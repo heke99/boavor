@@ -31,7 +31,13 @@ export default async function ListingDetailPage({ params }: Props) {
       <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
           <div className="relative h-[420px] overflow-hidden rounded-[34px]">
-            <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover" />
+            <Image
+              src={listing.imageUrl}
+              alt={listing.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 66vw"
+              className="object-cover"
+            />
           </div>
 
           <div className="mt-8">

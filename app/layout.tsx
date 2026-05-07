@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="sv">
+    <html lang="sv" data-scroll-behavior="smooth">
       <body>
         <Header />
         <main>{children}</main>

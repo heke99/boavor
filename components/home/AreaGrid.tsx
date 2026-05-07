@@ -1,8 +1,12 @@
-import { areaHighlights } from '@/lib/mock-data'
 import { Card } from '@/components/ui/Card'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { getAreaHighlights } from '@/lib/data/market'
 
-export function AreaGrid() {
+export async function AreaGrid() {
+  const areaHighlights = await getAreaHighlights()
+
+  if (!areaHighlights.length) return null
+
   return (
     <section className="container-shell py-16">
       <SectionHeading

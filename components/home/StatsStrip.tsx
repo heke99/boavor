@@ -1,6 +1,10 @@
-import { stats } from '@/lib/mock-data'
+import { getStats } from '@/lib/data/market'
 
-export function StatsStrip() {
+export async function StatsStrip() {
+  const stats = await getStats()
+
+  if (!stats.length) return null
+
   return (
     <div className="grid gap-4 md:grid-cols-4">
       {stats.map((item) => (

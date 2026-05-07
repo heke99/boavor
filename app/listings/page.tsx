@@ -3,6 +3,8 @@ import { ListingFilters } from '@/components/listings/ListingFilters'
 import { filterListings } from '@/lib/search'
 import { SearchFilters } from '@/lib/types'
 
+export const dynamic = 'force-dynamic'
+
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
@@ -17,14 +19,14 @@ export default async function ListingsPage({ searchParams }: Props) {
     propertyType: typeof params.propertyType === 'string' ? params.propertyType : undefined,
   }
 
-  const listings = filterListings(filters)
+  const listings = await filterListings(filters)
 
   return (
     <section className="container-shell py-12">
       <div className="max-w-2xl">
         <h1 className="text-4xl font-semibold">Alla objekt</h1>
         <p className="mt-3 text-base leading-7 text-[var(--muted)]">
-          Utforska hyresrätter, bostäder till salu och fastigheter med tydligare struktur och modernare presentation.
+          Utforska hyresrätter, bostäder till salu och fastigheter med tydligare struktur och nu direktkopplad databasmodell.
         </p>
       </div>
 
@@ -35,7 +37,7 @@ export default async function ListingsPage({ searchParams }: Props) {
       <div className="mt-6 flex items-center justify-between">
         <div className="text-sm text-[var(--muted)]">{listings.length} träffar</div>
         <div className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[#8a6000]">
-          Fas 9: favoriter och sparade sökningar redo
+          Fas 3: riktig databasmotor
         </div>
       </div>
 

@@ -1,8 +1,10 @@
 import { ListingGrid } from '@/components/listings/ListingGrid'
-import { mockListings } from '@/lib/mock-data'
+import { getPublishedListings } from '@/lib/data/listings'
 
-export default function RentPage() {
-  const listings = mockListings.filter((item) => item.listingType === 'rent')
+export const dynamic = 'force-dynamic'
+
+export default async function RentPage() {
+  const listings = await getPublishedListings({ mode: 'rent' })
 
   return (
     <section className="container-shell py-12">

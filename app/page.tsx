@@ -4,11 +4,15 @@ import { StatsStrip } from '@/components/home/StatsStrip'
 import { AreaGrid } from '@/components/home/AreaGrid'
 import { FeatureCards } from '@/components/home/FeatureCards'
 import { ListingGrid } from '@/components/listings/ListingGrid'
-import { mockListings } from '@/lib/mock-data'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
+import { getPublishedListings } from '@/lib/data/listings'
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const featuredListings = await getPublishedListings({}, { limit: 6 })
+
   return (
     <>
       <section className="hero-gradient soft-grid overflow-hidden">
@@ -50,10 +54,10 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Utvalda objekt"
           title="Objekt som visar hur Bovaro ska kännas"
-          description="Tydligare kort, bättre struktur, premiumkänsla och snabbare väg vidare till objektet."
+          description="Nu hämtade direkt från databasen i stället för mock-data, med struktur som går att bygga vidare på."
         />
         <div className="mt-8">
-          <ListingGrid listings={mockListings.slice(0, 6)} />
+          <ListingGrid listings={featuredListings} />
         </div>
       </section>
 

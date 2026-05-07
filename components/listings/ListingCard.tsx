@@ -11,7 +11,13 @@ export function ListingCard({ listing }: { listing: ListingCardItem }) {
   return (
     <Card className="overflow-hidden">
       <div className="relative h-60">
-        <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover" />
+        <Image
+          src={listing.imageUrl}
+          alt={listing.title}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          className="object-cover"
+        />
         <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
           {listing.badge ?? (isRent ? 'Hyra' : 'Till salu')}
         </div>
