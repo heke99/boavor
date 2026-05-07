@@ -1,28 +1,41 @@
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { forwardRef } from 'react'
+import clsx from 'clsx'
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   href?: string
-  variant?: 'primary' | 'secondary' | 'ghost' | 'light'
+  variant?: 'primary' | 'secondary' | 'ghost'
 }
 
-const base =
-  'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 focus:outline-none'
+const baseStyles =
+  'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#5b3df5]/30 disabled:cursor-not-allowed disabled:opacity-60'
+
 const variants = {
-  primary: 'bg-[var(--primary)] text-white shadow-[0_16px_40px_rgba(91,61,245,0.35)] hover:bg-[var(--primary-strong)]',
-  secondary: 'bg-[var(--secondary-soft)] text-[var(--secondary)] hover:opacity-90',
-  ghost: 'bg-transparent text-[var(--foreground)] hover:bg-black/5',
-  light: 'bg-white text-[var(--foreground)] hover:bg-white/90',
+  primary:
+    'bg-[#5b3df5] text-white hover:bg-[#4c31d8] shadow-[0_16px_40px_rgba(91,61,245,0.28)]',
+  secondary:
+    'bg-[#111827] text-white hover:bg-[#0b1220] shadow-[0_16px_40px_rgba(17,24,39,0.18)]',
+  ghost:
+    'border border-[#d7dbe7] bg-white text-[#111827] hover:bg-[#f7f8fc]',
 }
 
-export function Button({ className, href, variant = 'primary', ...props }: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant = 'primary', href, children, ...props },
+  ref,
+) {
+  const styles = clsx(baseStyles, variants[variant], className)
+
   if (href) {
     return (
-      <Link href={href} className={cn(base, variants[variant], className)}>
-        {props.children}
+      <Link href={href} className={styles}>
+        {children}
       </Link>
     )
   }
 
-  return <button className={cn(base, variants[variant], className)} {...props} />
-}
+  return (
+    <button ref={ref} className={styles} {...props}>
+      {children}
+    </button>
+  )
+})
