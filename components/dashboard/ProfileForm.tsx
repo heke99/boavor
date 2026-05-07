@@ -26,14 +26,18 @@ function formatDate(value: string | null) {
 export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
   const queue = profile.queueMembership
   const queueActive = queue?.status === 'active'
+  const company = profile.companies[0] ?? null
+  const isCompanyRole = ['landlord', 'broker', 'company_admin'].includes(profile.role)
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_380px]">
       <div className="space-y-6">
         <Card className="p-6">
           <div className="mb-5">
-            <h2 className="text-xl font-semibold">Grundprofil</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">Den här profilen används som grund inför framtida hyresansökningar och ger hyresvärdar bättre underlag.</p>
+            <h2 className="text-xl font-semibold">Grundprofil och roll</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Välj om du använder Bovaro som hyresgäst, köpare, privat hyresvärd eller som representant för ett bolag.
+            </p>
           </div>
 
           <form action={saveProfileAction} className="space-y-5">
@@ -42,6 +46,15 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <Input name="lastName" placeholder="Efternamn" defaultValue={profile.lastName} />
               <Input value={profile.email} readOnly disabled className="opacity-70" />
               <Input name="phone" placeholder="Telefon" defaultValue={profile.phone} />
+              <Select name="role" defaultValue={profile.role}>
+                <option value="seeker">Hyresgäst / bostadssökande</option>
+                <option value="buyer">Köpare</option>
+                <option value="landlord">Hyresvärd</option>
+                <option value="broker">Mäklare</option>
+                <option value="company_admin">Bolagsadmin / fastighetsbolag</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Superadmin</option>
+              </Select>
               <Input name="city" placeholder="Stad" defaultValue={profile.city} />
               <Input name="householdSize" type="number" min={1} placeholder="Hushållsstorlek" defaultValue={profile.householdSize ?? undefined} />
               <Select name="employmentStatus" defaultValue={profile.employmentStatus || 'employed'}>
@@ -66,6 +79,47 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
                 <input type="checkbox" name="hasPets" defaultChecked={profile.hasPets} />
                 Har husdjur
               </label>
+            </div>
+
+            <div className="rounded-[24px] border border-black/8 bg-[var(--surface)] p-5">
+              <h3 className="text-lg font-semibold">Bolag / organisationsroll</h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Fyll i detta om du är hyresvärd via bolag, fastighetsbolag, mäklarfirma eller hyresvärd som aktiebolag.
+              </p>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <Input name="companyName" placeholder="Bolagsnamn" defaultValue={company?.name ?? ''} />
+                <Select name="companyType" defaultValue={company?.companyType ?? 'landlord_company'}>
+                  <option value="private_landlord">Privat hyresvärd</option>
+                  <option value="landlord_company">Hyresvärd som bolag</option>
+                  <option value="brokerage">Mäklare / mäklarfirma</option>
+                  <option value="housing_association">Bostadsrättsförening</option>
+                  <option value="property_owner">Fastighetsägare</option>
+                  <option value="other">Övrigt</option>
+                </Select>
+                <Select name="legalForm" defaultValue={company?.legalForm ?? 'ab'}>
+                  <option value="ab">Aktiebolag (AB)</option>
+                  <option value="enskild_firma">Enskild firma</option>
+                  <option value="hb">Handelsbolag</option>
+                  <option value="kb">Kommanditbolag</option>
+                  <option value="ideell_forening">Förening</option>
+                  <option value="privatperson">Privatperson</option>
+                  <option value="other">Övrigt</option>
+                </Select>
+                <Input name="orgNumber" placeholder="Organisationsnummer" defaultValue="" />
+                <Input name="companyCity" placeholder="Bolagsstad" defaultValue={company ? profile.city : ''} />
+                <Input name="companyPhone" placeholder="Bolagstelefon" defaultValue="" />
+                <Input name="companyEmail" placeholder="Bolagsmail" defaultValue="" />
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm text-[var(--muted)]">
+                Aktiv roll just nu: <span className="font-semibold text-[var(--foreground)]">{profile.role}</span>
+                {company ? (
+                  <> • Kopplat bolag: <span className="font-semibold text-[var(--foreground)]">{company.name}</span></>
+                ) : isCompanyRole ? (
+                  <> • Inget bolag kopplat ännu</>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex justify-end">
@@ -116,7 +170,7 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
         <Card className="p-6">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold">Profil­dokument</h2>
+              <h2 className="text-xl font-semibold">Profildokument</h2>
               <p className="mt-2 text-sm text-[var(--muted)]">Lägg till dokument som senare kan kopplas till riktig filuppladdning. Redan nu kan du spara metadata och länkar.</p>
             </div>
             <div className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-[var(--muted)]">{profile.documents.length} st</div>
@@ -203,11 +257,12 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold">Hur hyresvärdar ser detta</h3>
+          <h3 className="text-lg font-semibold">Hur rollerna fungerar</h3>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-            <li>• Köpoäng syns som en extra signal, inte som ett tvång.</li>
-            <li>• Köstartdatum gör att hyresvärden ser hur länge du varit aktiv.</li>
-            <li>• Aktivt medlemskap gör profilen mer attraktiv men ersätter inte inkomst, referenser eller manuell bedömning.</li>
+            <li>• Hyresgäst / köpare använder kontot som privatperson.</li>
+            <li>• Hyresvärd kan vara privat eller representera ett bolag.</li>
+            <li>• Bolag kan ha legal form som AB, enskild firma eller annan form.</li>
+            <li>• Admin och superadmin finns i systemet som egna roller för intern styrning.</li>
           </ul>
         </Card>
       </div>

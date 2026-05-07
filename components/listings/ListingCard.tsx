@@ -4,6 +4,7 @@ import { BedDouble, Ruler, MapPin } from 'lucide-react'
 import { ListingCardItem } from '@/lib/types'
 import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/lib/utils'
+import { FavoriteButton } from '@/components/listings/FavoriteButton'
 
 export function ListingCard({ listing }: { listing: ListingCardItem }) {
   const isRent = listing.listingType === 'rent'
@@ -20,6 +21,9 @@ export function ListingCard({ listing }: { listing: ListingCardItem }) {
         />
         <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
           {listing.badge ?? (isRent ? 'Hyra' : 'Till salu')}
+        </div>
+        <div className="absolute right-4 top-4">
+          <FavoriteButton listingId={listing.id} compact />
         </div>
       </div>
       <div className="p-5">

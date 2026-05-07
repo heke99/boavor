@@ -2,6 +2,15 @@ export type ListingType = 'rent' | 'sale'
 export type PropertyType = 'apartment' | 'house' | 'property'
 export type ListingStatus = 'draft' | 'published' | 'paused' | 'rented' | 'sold' | 'archived'
 export type SavedSearchMode = 'rent' | 'sale' | 'all'
+export type AppRole = 'seeker' | 'buyer' | 'landlord' | 'broker' | 'company_admin' | 'admin' | 'super_admin'
+export type CompanyType =
+  | 'private_landlord'
+  | 'landlord_company'
+  | 'brokerage'
+  | 'housing_association'
+  | 'property_owner'
+  | 'other'
+export type LegalForm = 'ab' | 'enskild_firma' | 'hb' | 'kb' | 'ideell_forening' | 'privatperson' | 'other'
 export type RentalApplicationStatus =
   | 'draft'
   | 'submitted'
@@ -111,13 +120,22 @@ export type QueueMembershipItem = {
   subscriptionStatus: SubscriptionStatus | null
 }
 
+export type CompanyMembershipItem = {
+  companyId: string
+  name: string
+  slug: string
+  companyType: CompanyType
+  legalForm: LegalForm
+  memberRole: AppRole
+}
+
 export type DashboardProfileItem = {
   id: string
   email: string
   firstName: string
   lastName: string
   phone: string
-  role: string
+  role: AppRole
   city: string
   householdSize: number | null
   hasPets: boolean
@@ -129,4 +147,23 @@ export type DashboardProfileItem = {
   coApplicants: CoApplicantItem[]
   documents: ProfileDocumentItem[]
   queueMembership: QueueMembershipItem | null
+  companies: CompanyMembershipItem[]
+}
+
+export type FavoriteItem = {
+  id: string
+  createdAt: string
+  listing: ListingCardItem
+}
+
+export type SavedSearchItem = {
+  id: string
+  title: string
+  mode: SavedSearchMode
+  city: string | null
+  propertyType: PropertyType | null
+  minRooms: number | null
+  maxPrice: number | null
+  notificationsEnabled: boolean
+  createdAt: string
 }

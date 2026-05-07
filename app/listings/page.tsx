@@ -1,6 +1,6 @@
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { ListingFilters } from '@/components/listings/ListingFilters'
-import { filterListings } from '@/lib/search'
+import { getPublishedListings } from '@/lib/data/listings'
 import { SearchFilters } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,7 @@ export default async function ListingsPage({ searchParams }: Props) {
     propertyType: typeof params.propertyType === 'string' ? params.propertyType : undefined,
   }
 
-  const listings = await filterListings(filters)
+  const listings = await getPublishedListings(filters)
 
   return (
     <section className="container-shell py-12">
@@ -37,7 +37,7 @@ export default async function ListingsPage({ searchParams }: Props) {
       <div className="mt-6 flex items-center justify-between">
         <div className="text-sm text-[var(--muted)]">{listings.length} träffar</div>
         <div className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[#8a6000]">
-          Fas 3: riktig databasmotor
+          Fas 9: favoriter + sparade sökningar
         </div>
       </div>
 

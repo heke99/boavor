@@ -1,8 +1,10 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type {
-  CoApplicantItem,
+  AppRole,
+  CompanyMembershipItem,
+  CompanyType,
   DashboardProfileItem,
-  ProfileDocumentItem,
+  LegalForm,
   QueueMembershipItem,
   SubscriptionStatus,
 } from '@/lib/types'
@@ -12,7 +14,7 @@ type ProfileRow = {
   first_name: string | null
   last_name: string | null
   phone: string | null
-  role: string
+  role: AppRole
   city: string | null
   household_size: number | null
   has_pets: boolean
@@ -52,6 +54,19 @@ type QueueMembershipRow = {
 
 type SubscriptionRow = {
   status: SubscriptionStatus
+}
+
+type CompanyMembershipRow = {
+  role: AppRole
+  companies:
+    | {
+        id: string
+        name: string
+        slug: string
+        company_type: CompanyType | null
+        legal_form: LegalForm | null
+      }[]
+    | null
 }
 
 function addMonths(dateString: string, months: number) {
@@ -178,6 +193,11 @@ export async function getDashboardProfile() {
     .limit(1)
     .maybeSingle<SubscriptionRow>()
 
+  const { data: companyMemberships } = await supabase
+    .from('company_members')
+    .select('role, companies(id, name, slug, company_type, legal_form)')
+    .eq('user_id', user.id)
+
   const profile: DashboardProfileItem = {
     id: user.id,
     email: user.email,
@@ -219,6 +239,21 @@ export async function getDashboardProfile() {
           subscriptionStatus: subscription?.status ?? null,
         }
       : null,
+    companies: ((companyMemberships ?? []) as CompanyMembershipRow[])
+      .map((item) => {
+        const company = item.companies?.[0] ?? null
+        if (!company) return null
+
+        return {
+          companyId: company.id,
+          name: company.name,
+          slug: company.slug,
+          companyType: company.company_type ?? 'landlord_company',
+          legalForm: company.legal_form ?? 'ab',
+          memberRole: item.role,
+        }
+      })
+      .filter((item): item is CompanyMembershipItem => item !== null),
   }
 
   return { isSignedIn: true as const, profile }
