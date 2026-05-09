@@ -4,7 +4,7 @@ import clsx from 'clsx'
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   href?: string
-  variant?: 'primary' | 'secondary' | 'ghost'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'light'
 }
 
 const baseStyles =
@@ -12,11 +12,13 @@ const baseStyles =
 
 const variants = {
   primary:
-    'bg-[#5b3df5] text-white hover:bg-[#4c31d8] shadow-[0_16px_40px_rgba(91,61,245,0.28)]',
+    'bg-[#5b3df5] !text-white hover:bg-[#4c31d8] shadow-[0_16px_40px_rgba(91,61,245,0.28)]',
   secondary:
-    'bg-[#111827] text-white hover:bg-[#0b1220] shadow-[0_16px_40px_rgba(17,24,39,0.18)]',
+    'bg-[#111827] !text-white hover:bg-[#0b1220] shadow-[0_16px_40px_rgba(17,24,39,0.18)]',
   ghost:
-    'border border-[#d7dbe7] bg-white text-[#111827] hover:bg-[#f7f8fc]',
+    'border border-[#d7dbe7] bg-white !text-[#111827] hover:bg-[#f7f8fc]',
+  light:
+    'border border-[#d7dbe7] bg-white !text-[#111827] hover:bg-[#f7f8fc] shadow-[0_10px_28px_rgba(15,23,42,0.06)]',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

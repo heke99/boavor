@@ -1,5 +1,7 @@
 export type ListingType = 'rent' | 'sale'
 export type SavedSearchMode = 'all' | 'rent' | 'sale'
+export type AccountType = 'private' | 'company'
+export type PreferredListingIntent = 'rent' | 'buy' | 'both'
 
 export type PropertyType = 'apartment' | 'house' | 'property'
 export type AppRole =
@@ -28,8 +30,9 @@ export type CompanyType =
   | 'housing_association'
   | 'property_owner'
   | 'private_landlord'
+  | 'other'
 
-export type LegalForm = 'ab' | 'enskild_firma' | 'hb' | 'kb' | 'private_person'
+export type LegalForm = 'ab' | 'enskild_firma' | 'hb' | 'kb' | 'private_person' | 'ideell_forening' | 'privatperson' | 'other'
 
 export type ListingCardItem = {
   id: string
@@ -145,6 +148,13 @@ export type DashboardProfileItem = {
   lastName: string
   phone: string
   role: AppRole
+  accountType?: AccountType
+  personalIdentityNumber?: string | null
+  preferredListingIntent?: PreferredListingIntent
+  termsAcceptedAt?: string | null
+  privacyAcceptedAt?: string | null
+  personalIdentityConsentAt?: string | null
+  marketingConsent?: boolean
   city: string
   householdSize: number | null
   hasPets: boolean
@@ -164,6 +174,13 @@ export type ProfileFormValues = {
   lastName: string
   phone: string
   role: AppRole
+  accountType?: AccountType
+  personalIdentityNumber?: string | null
+  preferredListingIntent?: PreferredListingIntent
+  termsAcceptedAt?: string | null
+  privacyAcceptedAt?: string | null
+  personalIdentityConsentAt?: string | null
+  marketingConsent?: boolean
   city: string
   householdSize: number | null
   hasPets: boolean
