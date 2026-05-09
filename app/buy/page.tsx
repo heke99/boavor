@@ -10,7 +10,7 @@ export default async function BuyPage() {
     <section className="container-shell py-12">
       <h1 className="text-4xl font-semibold">Till salu</h1>
       <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--muted)]">
-        Bostäder till salu med starkare objektsidor, premiumkänsla och direktkopplad datamodell.
+        Bostäder, lokaler, parkeringar, mark och fastighetsobjekt till salu.
       </p>
       <div className="mt-8">
         <ListingGrid listings={listings} />

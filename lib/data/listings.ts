@@ -1,5 +1,18 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import type { ListingCardItem, ListingDetailItem, ListingType, PropertyType, SearchFilters } from '@/lib/types'
+import type {
+  CommercialType,
+  InvestmentType,
+  LandType,
+  ListingCardItem,
+  ListingDetailItem,
+  ListingSegment,
+  ListingType,
+  ParkingType,
+  PropertyType,
+  SearchFilters,
+  StorageType,
+} from '@/lib/types'
+import { getDefaultPropertyType } from '@/lib/listing-options'
 
 type ListingRow = {
   id: string
@@ -7,7 +20,19 @@ type ListingRow = {
   title: string
   description: string | null
   listing_type: ListingType
+  listing_purpose?: ListingType | null
+  listing_segment?: ListingSegment | null
   property_type: PropertyType
+  commercial_type?: CommercialType | null
+  parking_type?: ParkingType | null
+  storage_type?: StorageType | null
+  land_type?: LandType | null
+  investment_type?: InvestmentType | null
+  business_purpose?: string | null
+  is_vat_applicable?: boolean | null
+  monthly_service_fee?: number | null
+  price_per_sqm?: number | null
+  min_lease_months?: number | null
   status: ListingDetailItem['status']
   street: string | null
   city: string
@@ -61,6 +86,16 @@ function toNullableNumber(value: number | string | null | undefined) {
   return Number.isNaN(parsed) ? null : parsed
 }
 
+function getListingSegment(row: ListingRow): ListingSegment {
+  if (row.listing_segment) return row.listing_segment
+  if (['commercial_space', 'office'].includes(row.property_type)) return 'commercial'
+  if (['parking_space', 'garage'].includes(row.property_type)) return 'parking'
+  if (row.property_type === 'storage_unit') return 'storage'
+  if (row.property_type === 'land_plot') return 'land'
+  if (row.property_type === 'investment_property') return 'investment'
+  return 'residential'
+}
+
 function getCoverImage(row: ListingRow) {
   const sorted = [...(row.listing_images ?? [])].sort((a, b) => {
     if (a.is_cover === b.is_cover) return a.position - b.position
@@ -72,18 +107,26 @@ function getCoverImage(row: ListingRow) {
 
 function getBadge(row: ListingRow) {
   if (row.is_verified) return 'Verifierad annonsör'
+  if (getListingSegment(row) === 'commercial') return row.commercial_type === 'office' ? 'Kontor' : 'Lokal'
+  if (getListingSegment(row) === 'parking') return 'Parkering'
+  if (getListingSegment(row) === 'storage') return 'Förråd / lager'
+  if (getListingSegment(row) === 'land') return 'Mark / tomt'
+  if (getListingSegment(row) === 'investment') return 'Investeringsobjekt'
   return row.listing_type === 'rent' ? 'Hyra' : 'Till salu'
 }
 
 function mapListingCard(row: ListingRow): ListingCardItem {
+  const listingSegment = getListingSegment(row)
+
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
     city: row.city,
     areaName: row.area_name ?? row.city,
-    listingType: row.listing_type,
-    propertyType: row.property_type,
+    listingType: row.listing_purpose ?? row.listing_type,
+    listingSegment,
+    propertyType: row.property_type ?? getDefaultPropertyType(listingSegment, row.commercial_type),
     status: row.status,
     price: row.price,
     rooms: toNumber(row.rooms),
@@ -92,6 +135,16 @@ function mapListingCard(row: ListingRow): ListingCardItem {
     badge: getBadge(row),
     availableFrom: row.available_from,
     features: (row.listing_features ?? []).map((feature) => feature.feature_label),
+    commercialType: row.commercial_type ?? null,
+    parkingType: row.parking_type ?? null,
+    storageType: row.storage_type ?? null,
+    landType: row.land_type ?? null,
+    investmentType: row.investment_type ?? null,
+    businessPurpose: row.business_purpose ?? null,
+    isVatApplicable: Boolean(row.is_vat_applicable),
+    monthlyServiceFee: row.monthly_service_fee ?? null,
+    pricePerSqm: row.price_per_sqm ?? null,
+    minLeaseMonths: row.min_lease_months ?? null,
     isVerified: row.is_verified,
   }
 }
@@ -138,7 +191,19 @@ function queryBaseListings(supabase: NonNullable<Awaited<ReturnType<typeof creat
       title,
       description,
       listing_type,
+      listing_purpose,
+      listing_segment,
       property_type,
+      commercial_type,
+      parking_type,
+      storage_type,
+      land_type,
+      investment_type,
+      business_purpose,
+      is_vat_applicable,
+      monthly_service_fee,
+      price_per_sqm,
+      min_lease_months,
       status,
       street,
       city,
@@ -179,6 +244,30 @@ function queryBaseListings(supabase: NonNullable<Awaited<ReturnType<typeof creat
     `)
 }
 
+function applyFilters<T>(builder: T, filters: SearchFilters): T {
+  let query = builder as any
+  if (filters.mode) query = query.eq('listing_type', filters.mode)
+  if (filters.city) query = query.or(`city.ilike.%${filters.city}%,area_name.ilike.%${filters.city}%`)
+  if (filters.propertyType) query = query.eq('property_type', filters.propertyType)
+  if (filters.rooms) query = query.gte('rooms', Number(filters.rooms))
+  if (filters.maxPrice) query = query.lte('price', Number(filters.maxPrice))
+
+  if (filters.category && filters.category !== 'all') {
+    if (filters.category === 'office') {
+      query = query.eq('listing_segment', 'commercial').eq('commercial_type', 'office')
+    } else if (filters.category === 'commercial') {
+      query = query.eq('listing_segment', 'commercial').neq('commercial_type', 'office')
+    } else {
+      query = query.eq('listing_segment', filters.category)
+    }
+  } else if (filters.segment) {
+    query = query.eq('listing_segment', filters.segment)
+  }
+
+  if (filters.commercialType) query = query.eq('commercial_type', filters.commercialType)
+  return query as T
+}
+
 export async function getPublishedListings(filters: SearchFilters = {}, options?: { limit?: number }) {
   const supabase = await createSupabaseServerClient()
   if (!supabase) return [] as ListingCardItem[]
@@ -188,11 +277,7 @@ export async function getPublishedListings(filters: SearchFilters = {}, options?
     .order('published_at', { ascending: false })
     .order('created_at', { ascending: false })
 
-  if (filters.mode) builder = builder.eq('listing_type', filters.mode)
-  if (filters.city) builder = builder.ilike('city', `%${filters.city}%`)
-  if (filters.propertyType) builder = builder.eq('property_type', filters.propertyType)
-  if (filters.rooms) builder = builder.gte('rooms', Number(filters.rooms))
-  if (filters.maxPrice) builder = builder.lte('price', Number(filters.maxPrice))
+  builder = applyFilters(builder, filters)
   if (options?.limit) builder = builder.limit(options.limit)
 
   const { data, error } = await builder
@@ -229,6 +314,7 @@ export async function getRelatedListings(listing: ListingDetailItem, limit = 3) 
   const { data, error } = await queryBaseListings(supabase)
     .eq('status', 'published')
     .eq('listing_type', listing.listingType)
+    .eq('listing_segment', listing.listingSegment)
     .eq('city', listing.city)
     .neq('slug', listing.slug)
     .order('published_at', { ascending: false })

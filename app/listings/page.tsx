@@ -1,7 +1,7 @@
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { ListingFilters } from '@/components/listings/ListingFilters'
 import { getPublishedListings } from '@/lib/data/listings'
-import { SearchFilters } from '@/lib/types'
+import { ListingCategory, SearchFilters } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,10 +9,17 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+const validCategories: ListingCategory[] = ['all', 'residential', 'commercial', 'office', 'parking', 'storage', 'land', 'investment']
+
 export default async function ListingsPage({ searchParams }: Props) {
   const params = await searchParams
+  const category = typeof params.category === 'string' && validCategories.includes(params.category as ListingCategory)
+    ? (params.category as ListingCategory)
+    : undefined
+
   const filters: SearchFilters = {
     mode: typeof params.mode === 'string' && (params.mode === 'rent' || params.mode === 'sale') ? params.mode : undefined,
+    category,
     city: typeof params.city === 'string' ? params.city : undefined,
     rooms: typeof params.rooms === 'string' ? params.rooms : undefined,
     maxPrice: typeof params.maxPrice === 'string' ? params.maxPrice : undefined,
@@ -23,10 +30,10 @@ export default async function ListingsPage({ searchParams }: Props) {
 
   return (
     <section className="container-shell py-12">
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         <h1 className="text-4xl font-semibold">Alla objekt</h1>
         <p className="mt-3 text-base leading-7 text-[var(--muted)]">
-          Utforska hyresrätter, bostäder till salu och fastigheter med tydligare struktur och nu direktkopplad databasmodell.
+          Sök bostäder, lokaler, kontor, parkeringar, förråd, mark och investeringsfastigheter i samma kommersiella listing-motor.
         </p>
       </div>
 
@@ -37,7 +44,7 @@ export default async function ListingsPage({ searchParams }: Props) {
       <div className="mt-6 flex items-center justify-between">
         <div className="text-sm text-[var(--muted)]">{listings.length} träffar</div>
         <div className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[#8a6000]">
-          Fas 9: favoriter + sparade sökningar
+          Bostäder + kommersiella objekt
         </div>
       </div>
 

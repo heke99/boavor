@@ -10,7 +10,7 @@ export default async function RentPage() {
     <section className="container-shell py-12">
       <h1 className="text-4xl font-semibold">Hyra</h1>
       <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--muted)]">
-        Utforska hyresobjekt med tydligare presentation, bättre struktur och snabbare väg till nästa steg.
+        Hyresobjekt för bostäder, lokaler, kontor, parkeringar, förråd och mark.
       </p>
       <div className="mt-8">
         <ListingGrid listings={listings} />

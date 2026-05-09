@@ -3,7 +3,27 @@ export type SavedSearchMode = 'all' | 'rent' | 'sale'
 export type AccountType = 'private' | 'company'
 export type PreferredListingIntent = 'rent' | 'buy' | 'both'
 
-export type PropertyType = 'apartment' | 'house' | 'property'
+export type ListingSegment = 'residential' | 'commercial' | 'parking' | 'storage' | 'land' | 'investment'
+export type ListingCategory = 'all' | ListingSegment | 'office'
+export type PropertyType =
+  | 'apartment'
+  | 'house'
+  | 'property'
+  | 'commercial_space'
+  | 'office'
+  | 'parking_space'
+  | 'garage'
+  | 'storage_unit'
+  | 'land_plot'
+  | 'investment_property'
+export type CommercialType = 'office' | 'retail' | 'restaurant' | 'warehouse' | 'industrial' | 'showroom' | 'clinic' | 'workshop' | 'other'
+export type ParkingType = 'outdoor' | 'garage' | 'ev_charging' | 'motorcycle' | 'truck' | 'other'
+export type StorageType = 'storage_unit' | 'warehouse_box' | 'mini_warehouse' | 'pallet_space' | 'container' | 'other'
+export type LandType = 'land_plot' | 'industrial_land' | 'agricultural_land' | 'development_land' | 'yard_space' | 'other'
+export type InvestmentType = 'rental_property' | 'commercial_property' | 'mixed_use_property' | 'portfolio' | 'project_property' | 'other'
+export type InquiryStatus = 'new' | 'contacted' | 'viewing_booked' | 'negotiating' | 'closed' | 'rejected'
+export type InquiryType = 'interest' | 'viewing' | 'offer_request' | 'contact'
+
 export type AppRole =
   | 'seeker'
   | 'buyer'
@@ -41,6 +61,7 @@ export type ListingCardItem = {
   city: string
   areaName: string
   listingType: ListingType
+  listingSegment: ListingSegment
   propertyType: PropertyType
   status: ListingStatus
   price: number
@@ -50,6 +71,16 @@ export type ListingCardItem = {
   badge?: string
   availableFrom?: string | null
   features: string[]
+  commercialType?: CommercialType | null
+  parkingType?: ParkingType | null
+  storageType?: StorageType | null
+  landType?: LandType | null
+  investmentType?: InvestmentType | null
+  isVatApplicable?: boolean
+  monthlyServiceFee?: number | null
+  pricePerSqm?: number | null
+  minLeaseMonths?: number | null
+  businessPurpose?: string | null
   isVerified?: boolean
 }
 
@@ -81,6 +112,9 @@ export type ListingDetailItem = ListingCardItem & {
 
 export type SearchFilters = {
   mode?: ListingType
+  category?: ListingCategory
+  segment?: ListingSegment
+  commercialType?: CommercialType
   city?: string
   rooms?: string
   maxPrice?: string
@@ -232,13 +266,40 @@ export type ManagedListingItem = {
   title: string
   city: string
   listingType: ListingType
+  listingSegment: ListingSegment
   propertyType: PropertyType
+  commercialType?: CommercialType | null
   status: ListingStatus
   price: number
   rooms: number
   areaSqm: number
   createdAt: string
   applicationsCount: number
+  inquiriesCount?: number
+}
+
+
+export type ListingInquiryItem = {
+  id: string
+  status: InquiryStatus
+  inquiryType: InquiryType
+  createdAt: string
+  message: string | null
+  preferredContactMethod: string | null
+  requester: {
+    fullName: string
+    email: string
+    phone: string | null
+    companyName: string | null
+  }
+  listing: {
+    slug: string
+    title: string
+    city: string
+    listingType: ListingType
+    listingSegment: ListingSegment
+    price: number
+  }
 }
 
 export type AreaHighlight = {

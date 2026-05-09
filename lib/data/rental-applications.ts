@@ -1,8 +1,21 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import type { DashboardProfileItem, ListingCardItem, ManagedListingItem, PropertyType, RentalApplicationItem, RentalApplicationStatus } from '@/lib/types'
+import type {
+  DashboardProfileItem,
+  ListingCardItem,
+  ListingInquiryItem,
+  ListingSegment,
+  ListingType,
+  ManagedListingItem,
+  PropertyType,
+  RentalApplicationItem,
+  RentalApplicationStatus,
+  CommercialType,
+  InquiryStatus,
+  InquiryType,
+} from '@/lib/types'
 import { getDashboardProfile } from '@/lib/data/profile'
-import { getListingBySlug } from '@/lib/search'
+import { getListingBySlug } from '@/lib/data/listings'
 
 type RentalApplicationRow = {
   id: string
@@ -14,7 +27,7 @@ type RentalApplicationRow = {
   listing_slug: string
   listing_title: string
   listing_city: string
-  listing_type: 'rent' | 'sale'
+  listing_type: ListingType
   listing_price: number
   listing_image_url: string | null
   applicant_full_name: string
@@ -44,13 +57,34 @@ type ListingRow = {
   slug: string
   title: string
   city: string
-  listing_type: 'rent' | 'sale'
+  listing_type: ListingType
+  listing_segment: ListingSegment | null
   property_type: PropertyType
+  commercial_type: CommercialType | null
   status: ManagedListingItem['status']
   price: number
   rooms: number | string | null
   area_sqm: number | string | null
   created_at: string
+}
+
+type InquiryRow = {
+  id: string
+  status: InquiryStatus
+  inquiry_type: InquiryType
+  created_at: string
+  message: string | null
+  preferred_contact_method: string | null
+  requester_full_name: string
+  requester_email: string
+  requester_phone: string | null
+  requester_company_name: string | null
+  listing_slug: string
+  listing_title: string
+  listing_city: string
+  listing_type: ListingType
+  listing_segment: ListingSegment
+  listing_price: number
 }
 
 function toNumber(value: number | string | null | undefined) {
@@ -73,8 +107,8 @@ export async function requireSignedInUser() {
 
 export async function getApplyPageData(slug: string) {
   const { user } = await requireSignedInUser()
-  const listing = getListingBySlug(slug)
-  if (!listing || listing.listingType !== 'rent') redirect(`/listing/${slug}`)
+  const listing = await getListingBySlug(slug)
+  if (!listing || listing.listingType !== 'rent' || listing.listingSegment !== 'residential') redirect(`/listing/${slug}`)
 
   const { isSignedIn, profile } = await getDashboardProfile()
   if (!isSignedIn || !profile) redirect('/login')
@@ -171,7 +205,7 @@ export async function getOwnerDashboardData() {
 
   let listingsQuery = supabase
     .from('listings')
-    .select('id, slug, title, city, listing_type, property_type, status, price, rooms, area_sqm, created_at')
+    .select('id, slug, title, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at')
     .order('created_at', { ascending: false })
 
   if (companyIds.length > 0) {
@@ -187,13 +221,21 @@ export async function getOwnerDashboardData() {
 
   const listingIds = ((listings ?? []) as ListingRow[]).map((item) => item.id)
 
-  const { data: applicationCounts } = listingIds.length
-    ? await supabase.from('rental_applications').select('listing_id').in('listing_id', listingIds)
-    : { data: [] }
+  const [{ data: applicationCounts }, { data: inquiryCounts }] = listingIds.length
+    ? await Promise.all([
+        supabase.from('rental_applications').select('listing_id').in('listing_id', listingIds),
+        supabase.from('listing_inquiries').select('listing_id').in('listing_id', listingIds),
+      ])
+    : [{ data: [] }, { data: [] }]
 
-  const counts = new Map<string, number>()
+  const appCounts = new Map<string, number>()
   for (const row of (applicationCounts ?? []) as Array<{ listing_id: string }>) {
-    counts.set(row.listing_id, (counts.get(row.listing_id) ?? 0) + 1)
+    appCounts.set(row.listing_id, (appCounts.get(row.listing_id) ?? 0) + 1)
+  }
+
+  const leadCounts = new Map<string, number>()
+  for (const row of (inquiryCounts ?? []) as Array<{ listing_id: string }>) {
+    leadCounts.set(row.listing_id, (leadCounts.get(row.listing_id) ?? 0) + 1)
   }
 
   const managedListings: ManagedListingItem[] = ((listings ?? []) as ListingRow[]).map((item) => ({
@@ -202,13 +244,16 @@ export async function getOwnerDashboardData() {
     title: item.title,
     city: item.city,
     listingType: item.listing_type,
+    listingSegment: item.listing_segment ?? 'residential',
     propertyType: item.property_type,
+    commercialType: item.commercial_type,
     status: item.status,
     price: item.price,
     rooms: toNumber(item.rooms),
     areaSqm: toNumber(item.area_sqm),
     createdAt: item.created_at,
-    applicationsCount: counts.get(item.id) ?? 0,
+    applicationsCount: appCounts.get(item.id) ?? 0,
+    inquiriesCount: leadCounts.get(item.id) ?? 0,
   }))
 
   const incomingQuery = supabase
@@ -295,10 +340,51 @@ export async function getOwnerDashboardData() {
     })),
   }))
 
+  let inquiriesQuery = supabase
+    .from('listing_inquiries')
+    .select('id, status, inquiry_type, created_at, message, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (listingIds.length > 0) {
+    inquiriesQuery = inquiriesQuery.in('listing_id', listingIds)
+  } else {
+    inquiriesQuery = inquiriesQuery.eq('landlord_user_id', user.id)
+  }
+
+  const { data: incomingInquiries, error: inquiryError } = await inquiriesQuery
+  if (inquiryError) {
+    console.error('Failed to fetch incoming inquiries', inquiryError)
+  }
+
+  const inquiries: ListingInquiryItem[] = ((incomingInquiries ?? []) as InquiryRow[]).map((row) => ({
+    id: row.id,
+    status: row.status,
+    inquiryType: row.inquiry_type,
+    createdAt: row.created_at,
+    message: row.message,
+    preferredContactMethod: row.preferred_contact_method,
+    requester: {
+      fullName: row.requester_full_name,
+      email: row.requester_email,
+      phone: row.requester_phone,
+      companyName: row.requester_company_name,
+    },
+    listing: {
+      slug: row.listing_slug,
+      title: row.listing_title,
+      city: row.listing_city,
+      listingType: row.listing_type,
+      listingSegment: row.listing_segment,
+      price: row.listing_price,
+    },
+  }))
+
   return {
     profile,
     listings: managedListings,
     incomingApplications: applications,
+    incomingInquiries: inquiries,
   }
 }
 
@@ -312,6 +398,7 @@ export function buildListingSnapshot(listing: ListingCardItem) {
     title: listing.title,
     city: listing.city,
     listingType: listing.listingType,
+    listingSegment: listing.listingSegment,
     price: listing.price,
     imageUrl: listing.imageUrl,
   }

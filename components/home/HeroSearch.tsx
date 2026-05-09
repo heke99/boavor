@@ -6,29 +6,33 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { ListingType } from '@/lib/types'
+import { ListingCategory, ListingType } from '@/lib/types'
+
+const categoryOptions: Array<{ value: ListingCategory; label: string }> = [
+  { value: 'residential', label: 'Bostad' },
+  { value: 'commercial', label: 'Lokal' },
+  { value: 'office', label: 'Kontor' },
+  { value: 'parking', label: 'Parkering' },
+  { value: 'storage', label: 'Förråd' },
+  { value: 'investment', label: 'Fastighet' },
+]
 
 export function HeroSearch() {
   const router = useRouter()
   const [mode, setMode] = useState<ListingType>('rent')
+  const [category, setCategory] = useState<ListingCategory>('residential')
   const [city, setCity] = useState('')
-  const [rooms, setRooms] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
-  const [propertyType, setPropertyType] = useState('')
 
-  const buttonLabel = useMemo(
-    () => (mode === 'rent' ? 'Sök hyresbostäder' : 'Sök bostäder till salu'),
-    [mode],
-  )
+  const buttonLabel = useMemo(() => (mode === 'rent' ? 'Sök att hyra' : 'Sök att köpa'), [mode])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const params = new URLSearchParams()
     params.set('mode', mode)
+    params.set('category', category)
     if (city) params.set('city', city)
-    if (rooms) params.set('rooms', rooms)
     if (maxPrice) params.set('maxPrice', maxPrice)
-    if (propertyType) params.set('propertyType', propertyType)
     router.push(`/listings?${params.toString()}`)
   }
 
@@ -56,26 +60,40 @@ export function HeroSearch() {
           onClick={() => setMode('sale')}
           type="button"
         >
-          Till salu
+          Köpa
         </button>
 
         <div className="ml-auto hidden items-center gap-2 rounded-full bg-[#eef2ff] px-4 py-2 text-sm font-semibold text-[#2c3e94] lg:flex">
           <Sparkles size={14} />
-          Smartare sök med Bovaro
+          Bostäder + kommersiella objekt
         </div>
       </div>
 
       <div className="mb-8">
         <h2 className="text-[1.7rem] font-semibold tracking-[-0.02em] text-[#111827] md:text-[1.95rem]">
-          Börja din bostadssökning
+          Sök i hela Bovaro
         </h2>
         <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#5b6475]">
-          Filtrera direkt på stad, bostadstyp, antal rum och pris. Sökrutan är byggd för att kännas snabb,
-          tydlig och enkel att använda även när fler filter kopplas på.
+          Hitta bostäder, lokaler, kontor, parkeringar, förråd, mark och investeringsfastigheter i samma sökflöde.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2 xl:grid-cols-2">
+      <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+        <div className="space-y-2.5">
+          <label className="text-sm font-semibold text-[#111827]">Vad söker du?</label>
+          <Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ListingCategory)}
+            className="h-14 rounded-2xl border border-[#d7dbe7] bg-white px-4 text-[15px] text-[#111827]"
+          >
+            {categoryOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         <div className="space-y-2.5">
           <label className="text-sm font-semibold text-[#111827]">Var</label>
           <Input
@@ -87,50 +105,20 @@ export function HeroSearch() {
         </div>
 
         <div className="space-y-2.5">
-          <label className="text-sm font-semibold text-[#111827]">Bostadstyp</label>
-          <Select
-            value={propertyType}
-            onChange={(e) => setPropertyType(e.target.value)}
-            className="h-14 rounded-2xl border border-[#d7dbe7] bg-white px-4 text-[15px] text-[#111827]"
-          >
-            <option value="">Alla bostadstyper</option>
-            <option value="apartment">Lägenhet</option>
-            <option value="house">Hus</option>
-            <option value="property">Fastighet</option>
-          </Select>
-        </div>
-
-        <div className="space-y-2.5">
-          <label className="text-sm font-semibold text-[#111827]">Antal rum</label>
-          <Select
-            value={rooms}
-            onChange={(e) => setRooms(e.target.value)}
-            className="h-14 rounded-2xl border border-[#d7dbe7] bg-white px-4 text-[15px] text-[#111827]"
-          >
-            <option value="">Välj antal rum</option>
-            <option value="1">1+ rum</option>
-            <option value="2">2+ rum</option>
-            <option value="3">3+ rum</option>
-            <option value="4">4+ rum</option>
-            <option value="5">5+ rum</option>
-          </Select>
-        </div>
-
-        <div className="space-y-2.5">
           <label className="text-sm font-semibold text-[#111827]">
             {mode === 'rent' ? 'Max hyra' : 'Max pris'}
           </label>
           <Input
             type="number"
-            placeholder={mode === 'rent' ? 'Exempel: 15000' : 'Exempel: 4500000'}
+            placeholder={mode === 'rent' ? 'Exempel: 25000' : 'Exempel: 4500000'}
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
             className="h-14 rounded-2xl border border-[#d7dbe7] bg-white px-4 text-[15px] text-[#111827] placeholder:text-[#7a8396]"
           />
         </div>
 
-        <div className="xl:col-span-2 flex items-end">
-          <Button className="h-14 w-full rounded-2xl bg-[#5b3df5] text-[15px] font-semibold text-white hover:bg-[#4c31d8]">
+        <div className="flex items-end">
+          <Button className="h-14 w-full rounded-2xl bg-[#5b3df5] text-[15px] font-semibold !text-white hover:bg-[#4c31d8]">
             <Search size={18} className="mr-2" />
             {buttonLabel}
           </Button>

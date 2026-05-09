@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import type { FavoriteItem, ListingCardItem, PropertyType, SavedSearchItem, SavedSearchMode } from '@/lib/types'
+import type { CommercialType, FavoriteItem, ListingCardItem, ListingSegment, PropertyType, SavedSearchItem, SavedSearchMode } from '@/lib/types'
 
 type FavoriteListingRow = {
   id: string
@@ -8,6 +8,8 @@ type FavoriteListingRow = {
   city: string
   area_name: string | null
   listing_type: ListingCardItem['listingType']
+  listing_segment: ListingSegment | null
+  commercial_type: CommercialType | null
   property_type: ListingCardItem['propertyType']
   status: ListingCardItem['status']
   price: number
@@ -64,7 +66,9 @@ function mapListing(listing: FavoriteListingRow): ListingCardItem {
     city: listing.city,
     areaName: listing.area_name ?? listing.city,
     listingType: listing.listing_type,
+    listingSegment: listing.listing_segment ?? 'residential',
     propertyType: listing.property_type,
+    commercialType: listing.commercial_type,
     status: listing.status,
     price: listing.price,
     rooms: toNumber(listing.rooms),
@@ -99,6 +103,8 @@ export async function getDashboardFavorites() {
         city,
         area_name,
         listing_type,
+        listing_segment,
+        commercial_type,
         property_type,
         status,
         price,
