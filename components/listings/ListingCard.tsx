@@ -10,6 +10,8 @@ import { getListingPrimaryMeta, listingTypeLabels } from '@/lib/listing-options'
 export function ListingCard({ listing }: { listing: ListingCardItem }) {
   const isRent = listing.listingType === 'rent'
   const isResidential = listing.listingSegment === 'residential'
+  const isInvestment = listing.listingSegment === 'investment'
+  const isParking = listing.listingSegment === 'parking'
   const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
 
   return (
@@ -62,11 +64,17 @@ export function ListingCard({ listing }: { listing: ListingCardItem }) {
               {listing.rooms} rum
             </div>
           ) : null}
-          <div className="flex items-center gap-2">
-            {isResidential ? <Ruler size={16} /> : <Building2 size={16} />}
-            {listing.areaSqm} m²
-          </div>
+          {listing.areaSqm ? (
+            <div className="flex items-center gap-2">
+              {isResidential ? <Ruler size={16} /> : <Building2 size={16} />}
+              {listing.areaSqm} m²
+            </div>
+          ) : null}
           {listing.minLeaseMonths ? <div>{listing.minLeaseMonths} mån min.</div> : null}
+          {isParking && listing.parkingType === 'ev_charging' ? <div>Laddplats</div> : null}
+          {isInvestment && listing.unitsCount ? <div>{listing.unitsCount} units</div> : null}
+          {isInvestment && listing.capRate ? <div>Cap rate {listing.capRate}%</div> : null}
+          {isInvestment && listing.annualIncome ? <div>NOI/intäkt {listing.annualIncome.toLocaleString('sv-SE')} kr</div> : null}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">

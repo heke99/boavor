@@ -7,6 +7,7 @@ import { ListingGrid } from '@/components/listings/ListingGrid'
 import { mockListings } from '@/lib/mock-data'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
+import { Suspense } from 'react'
 
 export default function HomePage() {
   return (
@@ -75,8 +76,14 @@ export default function HomePage() {
             </div>
 
             <div>
+            <Suspense
+              fallback={
+                <div className="h-[520px] rounded-[36px] border border-white/20 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]" />
+              }
+            >
               <HeroSearch />
-            </div>
+            </Suspense>
+          </div>
           </div>
 
           <div className="mt-10">

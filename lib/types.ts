@@ -81,6 +81,12 @@ export type ListingCardItem = {
   pricePerSqm?: number | null
   minLeaseMonths?: number | null
   businessPurpose?: string | null
+  annualIncome?: number | null
+  operatingCost?: number | null
+  capRate?: number | null
+  unitsCount?: number | null
+  occupancyRate?: number | null
+  vacancyRate?: number | null
   isVerified?: boolean
 }
 
@@ -114,11 +120,49 @@ export type SearchFilters = {
   mode?: ListingType
   category?: ListingCategory
   segment?: ListingSegment
-  commercialType?: CommercialType
   city?: string
-  rooms?: string
   maxPrice?: string
-  propertyType?: string
+  minArea?: string
+  maxArea?: string
+  availableFrom?: string
+  propertyType?: PropertyType
+  commercialType?: CommercialType
+  parkingType?: ParkingType
+  storageType?: StorageType
+  landType?: LandType
+  investmentType?: InvestmentType
+  rooms?: string
+  minRooms?: string
+  hasBalcony?: string
+  hasElevator?: string
+  hasParking?: string
+  petsAllowed?: string
+  isVatApplicable?: string
+  minLeaseMonths?: string
+  workplaces?: string
+  meetingRooms?: string
+  isFurnished?: string
+  hasReception?: string
+  access247?: string
+  hasEvCharger?: string
+  isGarage?: string
+  hasCameraSurveillance?: string
+  maxVehicleHeightCm?: string
+  isHeated?: string
+  hasLoadingZone?: string
+  hasElevatorAccess?: string
+  hasDetailPlan?: string
+  hasBuildingRights?: string
+  hasWaterSewer?: string
+  hasElectricity?: string
+  hasRoadAccess?: string
+  minLandArea?: string
+  minUnits?: string
+  minNoi?: string
+  minCapRate?: string
+  minOccupancyRate?: string
+  maxVacancyRate?: string
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'area_desc'
 }
 
 export type FavoriteItem = {

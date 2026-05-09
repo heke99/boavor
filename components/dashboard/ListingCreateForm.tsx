@@ -152,7 +152,6 @@ export function ListingCreateForm({ action }: Props) {
               <option value="commercial_property">Kommersiell fastighet</option>
               <option value="mixed_use_property">Blandfastighet</option>
               <option value="portfolio">Portfolio</option>
-              <option value="project_property">Projektfastighet</option>
               <option value="other">Annat investeringsobjekt</option>
             </Select>
           </div>
