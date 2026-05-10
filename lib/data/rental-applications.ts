@@ -3,7 +3,11 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type {
   DashboardProfileItem,
   ListingCardItem,
+  ListingActivityEventItem,
+  ListingEditItem,
   ListingInquiryItem,
+  ListingInternalNoteItem,
+  ListingRentalRequirementItem,
   ListingSegment,
   ListingType,
   ManagedListingDetailItem,
@@ -13,6 +17,10 @@ import type {
   RentalApplicationStatus,
   CommercialType,
   InquiryStatus,
+  InvestmentType,
+  LandType,
+  ParkingType,
+  StorageType,
   InquiryType,
 } from '@/lib/types'
 import { calculateApplicationScore } from '@/lib/dashboard/profile-score'
@@ -445,6 +453,51 @@ type ManagedListingDetailRow = ListingRow & {
   available_from: string | null
 }
 
+type ManagedListingEditRow = ManagedListingDetailRow & {
+  zip_code: string | null
+  parking_type: ParkingType | null
+  storage_type: StorageType | null
+  land_type: LandType | null
+  investment_type: InvestmentType | null
+  business_purpose: string | null
+  is_vat_applicable: boolean | null
+  monthly_service_fee: number | string | null
+  price_per_sqm: number | string | null
+  min_lease_months: number | string | null
+  annual_income: number | string | null
+  operating_cost: number | string | null
+  cap_rate: number | string | null
+  units_count: number | string | null
+  created_by: string | null
+  company_id: string | null
+}
+
+type ListingInternalNoteRow = {
+  id: string
+  note: string
+  created_at: string
+  created_by: string | null
+}
+
+type ListingActivityEventRow = {
+  id: string
+  event_type: string
+  message: string | null
+  payload: Record<string, unknown> | null
+  created_at: string
+}
+
+type ListingFeatureRow = {
+  feature_label: string
+}
+
+type RentalRequirementRow = {
+  min_income: number | null
+  pets_allowed: boolean | null
+  employment_required: boolean | null
+  references_required: boolean | null
+}
+
 type ListingImageRow = {
   id: string
   image_url: string
@@ -537,7 +590,7 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
   const ownsListing = listing.created_by === user.id || (listing.company_id ? companyIds.includes(listing.company_id) : false)
   if (!ownsListing && !['admin', 'super_admin'].includes(profile.role)) return null
 
-  const [{ data: images }, { data: applicationRows }, { data: inquiryRows }] = await Promise.all([
+  const [{ data: images }, { data: applicationRows }, { data: inquiryRows }, { data: internalNotes }, { data: activityEvents }] = await Promise.all([
     supabase
       .from('listing_images')
       .select('id, image_url, alt_text, is_cover, position')
@@ -553,6 +606,18 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
       .select('id, listing_id, status, inquiry_type, created_at, message, internal_note, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
       .eq('listing_id', listingId)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('listing_internal_notes')
+      .select('id, note, created_at, created_by')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('listing_activity_events')
+      .select('id, event_type, message, payload, created_at')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(30),
   ])
 
   const applicationIds = ((applicationRows ?? []) as RentalApplicationRow[]).map((item) => item.id)
@@ -624,5 +689,141 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
     })),
     applications,
     inquiries,
+    internalNotes: ((internalNotes ?? []) as ListingInternalNoteRow[]).map((note) => ({
+      id: note.id,
+      note: note.note,
+      createdAt: note.created_at,
+      createdBy: note.created_by,
+    })),
+    activityEvents: ((activityEvents ?? []) as ListingActivityEventRow[]).map((event) => ({
+      id: event.id,
+      eventType: event.event_type,
+      message: event.message,
+      payload: event.payload ?? {},
+      createdAt: event.created_at,
+    })),
+  }
+}
+
+export async function getManagedListingEditData(listingId: string): Promise<ListingEditItem | null> {
+  const { supabase, user } = await requireSignedInUser()
+  const { isSignedIn, profile } = await getDashboardProfile()
+  if (!isSignedIn || !profile) redirect('/login')
+
+  const companyIds = profile.companies.map((company) => company.companyId)
+
+  const { data: listing, error } = await supabase
+    .from('listings')
+    .select('id, slug, title, description, street, area_name, zip_code, available_from, city, listing_type, listing_segment, property_type, commercial_type, parking_type, storage_type, land_type, investment_type, business_purpose, is_vat_applicable, monthly_service_fee, price_per_sqm, min_lease_months, annual_income, operating_cost, cap_rate, units_count, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .eq('id', listingId)
+    .maybeSingle<ManagedListingEditRow>()
+
+  if (error) {
+    console.error('Failed to fetch listing edit data', error)
+    return null
+  }
+
+  if (!listing) return null
+
+  const ownsListing = listing.created_by === user.id || (listing.company_id ? companyIds.includes(listing.company_id) : false)
+  if (!ownsListing && !['admin', 'super_admin'].includes(profile.role)) return null
+
+  const [{ data: images }, { data: features }, { data: rentalRequirement }, { data: internalNotes }, { data: activityEvents }] = await Promise.all([
+    supabase
+      .from('listing_images')
+      .select('id, image_url, alt_text, is_cover, position')
+      .eq('listing_id', listingId)
+      .order('position', { ascending: true }),
+    supabase
+      .from('listing_features')
+      .select('feature_label')
+      .eq('listing_id', listingId)
+      .order('feature_label', { ascending: true }),
+    supabase
+      .from('rental_requirements')
+      .select('min_income, pets_allowed, employment_required, references_required')
+      .eq('listing_id', listingId)
+      .maybeSingle<RentalRequirementRow>(),
+    supabase
+      .from('listing_internal_notes')
+      .select('id, note, created_at, created_by')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('listing_activity_events')
+      .select('id, event_type, message, payload, created_at')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })
+      .limit(30),
+  ])
+
+  const coverImage = ((images ?? []) as ListingImageRow[]).find((image) => image.is_cover) ?? ((images ?? []) as ListingImageRow[])[0] ?? null
+
+  return {
+    id: listing.id,
+    slug: listing.slug,
+    title: listing.title,
+    city: listing.city,
+    listingType: listing.listing_type,
+    listingSegment: listing.listing_segment ?? 'residential',
+    propertyType: listing.property_type,
+    commercialType: listing.commercial_type,
+    parkingType: listing.parking_type,
+    storageType: listing.storage_type,
+    landType: listing.land_type,
+    investmentType: listing.investment_type,
+    businessPurpose: listing.business_purpose,
+    isVatApplicable: Boolean(listing.is_vat_applicable),
+    monthlyServiceFee: toNumber(listing.monthly_service_fee) || null,
+    pricePerSqm: toNumber(listing.price_per_sqm) || null,
+    minLeaseMonths: toNumber(listing.min_lease_months) || null,
+    annualIncome: toNumber(listing.annual_income) || null,
+    operatingCost: toNumber(listing.operating_cost) || null,
+    capRate: toNumber(listing.cap_rate) || null,
+    unitsCount: toNumber(listing.units_count) || null,
+    status: listing.status,
+    price: listing.price,
+    rooms: toNumber(listing.rooms),
+    areaSqm: toNumber(listing.area_sqm),
+    createdAt: listing.created_at,
+    updatedAt: listing.updated_at ?? null,
+    applicationsCount: 0,
+    inquiriesCount: 0,
+    description: listing.description,
+    street: listing.street,
+    areaName: listing.area_name,
+    zipCode: listing.zip_code,
+    availableFrom: listing.available_from,
+    images: ((images ?? []) as ListingImageRow[]).map((image) => ({
+      id: image.id,
+      imageUrl: image.image_url,
+      altText: image.alt_text,
+      isCover: image.is_cover,
+      position: image.position,
+    })),
+    coverImageUrl: coverImage?.image_url ?? null,
+    features: ((features ?? []) as ListingFeatureRow[]).map((feature) => feature.feature_label).filter(Boolean),
+    rentalRequirements: rentalRequirement ? {
+      minIncome: rentalRequirement.min_income,
+      petsAllowed: Boolean(rentalRequirement.pets_allowed),
+      employmentRequired: Boolean(rentalRequirement.employment_required),
+      referencesRequired: Boolean(rentalRequirement.references_required),
+    } : null,
+    applications: [],
+    inquiries: [],
+    internalNotes: ((internalNotes ?? []) as ListingInternalNoteRow[]).map((note) => ({
+      id: note.id,
+      note: note.note,
+      createdAt: note.created_at,
+      createdBy: note.created_by,
+    })),
+    activityEvents: ((activityEvents ?? []) as ListingActivityEventRow[]).map((event) => ({
+      id: event.id,
+      eventType: event.event_type,
+      message: event.message,
+      payload: event.payload ?? {},
+      createdAt: event.created_at,
+    })),
   }
 }

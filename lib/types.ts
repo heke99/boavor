@@ -329,6 +329,28 @@ export type ManagedListingItem = {
   updatedAt?: string | null
 }
 
+export type ListingActivityEventItem = {
+  id: string
+  eventType: string
+  message: string | null
+  payload: Record<string, unknown>
+  createdAt: string
+}
+
+export type ListingInternalNoteItem = {
+  id: string
+  note: string
+  createdAt: string
+  createdBy: string | null
+}
+
+export type ListingRentalRequirementItem = {
+  minIncome: number | null
+  petsAllowed: boolean
+  employmentRequired: boolean
+  referencesRequired: boolean
+}
+
 export type ManagedListingDetailItem = ManagedListingItem & {
   description: string | null
   street: string | null
@@ -337,8 +359,29 @@ export type ManagedListingDetailItem = ManagedListingItem & {
   images: Array<{ id: string; imageUrl: string; altText: string | null; isCover: boolean; position: number }>
   applications: RentalApplicationItem[]
   inquiries: ListingInquiryItem[]
+  internalNotes?: ListingInternalNoteItem[]
+  activityEvents?: ListingActivityEventItem[]
 }
 
+export type ListingEditItem = ManagedListingDetailItem & {
+  zipCode: string | null
+  parkingType?: ParkingType | null
+  storageType?: StorageType | null
+  landType?: LandType | null
+  investmentType?: InvestmentType | null
+  businessPurpose?: string | null
+  isVatApplicable?: boolean
+  monthlyServiceFee?: number | null
+  pricePerSqm?: number | null
+  minLeaseMonths?: number | null
+  annualIncome?: number | null
+  operatingCost?: number | null
+  capRate?: number | null
+  unitsCount?: number | null
+  coverImageUrl?: string | null
+  features: string[]
+  rentalRequirements: ListingRentalRequirementItem | null
+}
 
 export type ListingInquiryItem = {
   id: string

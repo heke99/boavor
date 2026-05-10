@@ -110,6 +110,9 @@ export default async function DashboardListingsPage() {
                               <Button href={`/dashboard/listings/${listing.id}`} variant="secondary" className="px-3 py-2 text-xs">
                                 Öppna
                               </Button>
+                              <Button href={`/dashboard/listings/${listing.id}/edit`} variant="ghost" className="border border-black/8 px-3 py-2 text-xs !text-[#111827]">
+                                Redigera
+                              </Button>
                               <Button href={`/listing/${listing.slug}`} variant="ghost" className="border border-black/8 px-3 py-2 text-xs !text-[#111827]">
                                 Förhandsvisa
                               </Button>

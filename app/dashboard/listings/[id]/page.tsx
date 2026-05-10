@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/Select'
 import { getManagedListingDetail } from '@/lib/data/rental-applications'
 import { formatCurrency } from '@/lib/utils'
 import { getListingPrimaryMeta } from '@/lib/listing-options'
-import { updateApplicationStatusAction, updateInquiryStatusAction, updateListingStatusAction } from '@/app/dashboard/listings/actions'
+import { addListingInternalNoteAction, updateApplicationStatusAction, updateInquiryStatusAction, updateListingStatusAction } from '@/app/dashboard/listings/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,6 +87,7 @@ export default async function DashboardListingDetailPage({ params }: { params: P
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
+              <Button href={`/dashboard/listings/${listing.id}/edit`} variant="secondary">Redigera objekt</Button>
               <Button href={`/listing/${listing.slug}`} variant="ghost" className="border border-[#d7dbe7] !text-[#111827]">Förhandsvisa</Button>
               <form action={updateListingStatusAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="listingId" value={listing.id} />
@@ -106,6 +107,40 @@ export default async function DashboardListingDetailPage({ params }: { params: P
                   Bild {image.position + 1} {image.isCover ? '· omslagsbild' : ''}
                 </a>
               )) : <p className="text-sm text-[#6b7280]">Inga bilder kopplade till objektet ännu.</p>}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-2xl font-semibold text-[#111827]">Interna anteckningar</h2>
+            <form action={addListingInternalNoteAction} className="mt-5 space-y-3">
+              <input type="hidden" name="listingId" value={listing.id} />
+              <textarea
+                name="note"
+                rows={4}
+                placeholder="Skriv en intern anteckning om objektet. Syns bara för dig/annonsören."
+                className="w-full rounded-2xl border border-[#d7dbe7] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#5b3df5] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+              />
+              <Button type="submit" variant="secondary">Lägg till anteckning</Button>
+            </form>
+            <div className="mt-5 space-y-3">
+              {listing.internalNotes?.length ? listing.internalNotes.map((note) => (
+                <div key={note.id} className="rounded-2xl border border-[#e8ebf3] bg-[#f8fafc] p-4">
+                  <p className="text-sm leading-7 text-[#111827]">{note.note}</p>
+                  <div className="mt-2 text-xs text-[#6b7280]">{new Date(note.createdAt).toLocaleString('sv-SE')}</div>
+                </div>
+              )) : <p className="text-sm text-[#6b7280]">Inga interna anteckningar ännu.</p>}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-2xl font-semibold text-[#111827]">Aktivitetslogg</h2>
+            <div className="mt-5 space-y-3">
+              {listing.activityEvents?.length ? listing.activityEvents.map((event) => (
+                <div key={event.id} className="rounded-2xl border border-[#e8ebf3] p-4">
+                  <div className="text-sm font-semibold text-[#111827]">{event.message ?? event.eventType}</div>
+                  <div className="mt-2 text-xs text-[#6b7280]">{event.eventType} · {new Date(event.createdAt).toLocaleString('sv-SE')}</div>
+                </div>
+              )) : <p className="text-sm text-[#6b7280]">Ingen aktivitet loggad ännu.</p>}
             </div>
           </Card>
         </div>
