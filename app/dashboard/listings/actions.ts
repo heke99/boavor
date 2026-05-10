@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing } from '@/lib/auth/permissions'
 import { requireSignedInUser } from '@/lib/data/rental-applications'
 import {
   AppRole,
@@ -50,10 +51,9 @@ function resolvePropertyType(segment: ListingSegment, formData: FormData) {
 }
 
 export async function createListingAction(formData: FormData) {
-  const { supabase, user } = await requireSignedInUser()
+  const { supabase, user, profile } = await requireDashboardAccess()
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle<{ role: AppRole }>()
-  if (!profile || !roleCanManageListings(profile.role)) return
+  if (!canCreateListing(profile.role)) return
 
   const title = String(formData.get('title') ?? '').trim()
   const city = String(formData.get('city') ?? '').trim()
@@ -88,12 +88,7 @@ export async function createListingAction(formData: FormData) {
   const featuresRaw = String(formData.get('features') ?? '').trim()
   const features = featuresRaw ? featuresRaw.split(',').map((item) => item.trim()).filter(Boolean) : []
 
-  const { data: companyMembership } = await supabase
-    .from('company_members')
-    .select('company_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle<{ company_id: string }>()
+  const companyId = profile.companyIds[0] ?? null
 
   const slugBase = slugify(title)
   const slug = `${slugBase}-${Date.now().toString().slice(-6)}`
@@ -102,7 +97,7 @@ export async function createListingAction(formData: FormData) {
   const { data: listing, error } = await supabase
     .from('listings')
     .insert({
-      company_id: companyMembership?.company_id ?? null,
+      company_id: companyId,
       created_by: user.id,
       title,
       slug,
@@ -179,23 +174,17 @@ export async function createListingAction(formData: FormData) {
 }
 
 export async function updateApplicationStatusAction(formData: FormData) {
-  const { supabase, user } = await requireSignedInUser()
+  const { supabase, profile } = await requireDashboardAccess()
   const applicationId = String(formData.get('applicationId') ?? '')
   const status = String(formData.get('status') ?? 'reviewing') as RentalApplicationStatus
   if (!applicationId) return
-
-  const { data: membership } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
-  const companyIds = (membership ?? []).map((item) => item.company_id)
 
   const { data: application } = await supabase
     .from('rental_applications')
     .select('id, landlord_user_id, landlord_company_id')
     .eq('id', applicationId)
     .maybeSingle<{ id: string; landlord_user_id: string | null; landlord_company_id: string | null }>()
-  if (!application) return
-
-  const canManage = application.landlord_user_id === user.id || (application.landlord_company_id && companyIds.includes(application.landlord_company_id))
-  if (!canManage) return
+  if (!canManageApplication(profile, application)) return
 
   await supabase.from('rental_applications').update({ status }).eq('id', applicationId)
   revalidatePath('/dashboard/listings')
@@ -203,14 +192,11 @@ export async function updateApplicationStatusAction(formData: FormData) {
 }
 
 export async function updateInquiryStatusAction(formData: FormData) {
-  const { supabase, user } = await requireSignedInUser()
+  const { supabase, profile } = await requireDashboardAccess()
   const inquiryId = String(formData.get('inquiryId') ?? '')
   const status = String(formData.get('status') ?? 'contacted') as InquiryStatus
   const internalNote = String(formData.get('internalNote') ?? '').trim() || null
   if (!inquiryId) return
-
-  const { data: membership } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
-  const companyIds = (membership ?? []).map((item) => item.company_id)
 
   const { data: inquiry } = await supabase
     .from('listing_inquiries')
@@ -219,18 +205,17 @@ export async function updateInquiryStatusAction(formData: FormData) {
     .maybeSingle<{ id: string; listing_id: string | null; landlord_user_id: string | null; landlord_company_id: string | null }>()
   if (!inquiry) return
 
-  let ownsListing = false
+  let listing = null
   if (inquiry.listing_id) {
-    const { data: listing } = await supabase
+    const { data } = await supabase
       .from('listings')
-      .select('created_by, company_id')
+      .select('id, created_by, company_id')
       .eq('id', inquiry.listing_id)
-      .maybeSingle<{ created_by: string | null; company_id: string | null }>()
-    ownsListing = listing?.created_by === user.id || Boolean(listing?.company_id && companyIds.includes(listing.company_id))
+      .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
+    listing = data
   }
 
-  const canManage = inquiry.landlord_user_id === user.id || (inquiry.landlord_company_id && companyIds.includes(inquiry.landlord_company_id)) || ownsListing
-  if (!canManage) return
+  if (!canManageInquiry(profile, { ...inquiry, listing })) return
 
   await supabase
     .from('listing_inquiries')
@@ -242,13 +227,10 @@ export async function updateInquiryStatusAction(formData: FormData) {
 }
 
 export async function updateListingStatusAction(formData: FormData) {
-  const { supabase, user } = await requireSignedInUser()
+  const { supabase, user, profile } = await requireDashboardAccess()
   const listingId = String(formData.get('listingId') ?? '')
   const status = String(formData.get('status') ?? 'paused') as ListingStatus
   if (!listingId) return
-
-  const { data: membership } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
-  const companyIds = (membership ?? []).map((item) => item.company_id)
 
   const { data: listing } = await supabase
     .from('listings')
@@ -256,10 +238,8 @@ export async function updateListingStatusAction(formData: FormData) {
     .eq('id', listingId)
     .maybeSingle<{ id: string; status: ListingStatus; created_by: string | null; company_id: string | null }>()
 
+  if (!canManageListing(profile, listing)) return
   if (!listing) return
-
-  const canManage = listing.created_by === user.id || Boolean(listing.company_id && companyIds.includes(listing.company_id))
-  if (!canManage) return
 
   await supabase
     .from('listings')

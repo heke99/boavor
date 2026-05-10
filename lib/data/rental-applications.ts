@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth/permissions'
 import type {
   DashboardProfileItem,
   ListingCardItem,
@@ -107,15 +108,7 @@ function toNumber(value: number | string | null | undefined) {
 }
 
 export async function requireSignedInUser() {
-  const supabase = await createSupabaseServerClient()
-  if (!supabase) redirect('/login')
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user || !user.email) redirect('/login')
-
+  const { supabase, user } = await getAuthContext({ loginRedirect: '/login' })
   return { supabase, user }
 }
 

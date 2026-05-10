@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAdminAccess } from '@/lib/auth/permissions'
 import type {
   AppRole,
   InquiryStatus,
@@ -102,23 +101,7 @@ export type AdminOverviewData = {
 }
 
 async function getAdminClient() {
-  const supabase = await createSupabaseServerClient()
-  if (!supabase) redirect('/login?next=/admin')
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login?next=/admin')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle<{ role: AppRole }>()
-
-  if (!profile || !['admin', 'super_admin'].includes(profile.role)) redirect('/dashboard')
-
+  const { supabase, user, profile } = await requireAdminAccess()
   return { supabase, user, role: profile.role }
 }
 
