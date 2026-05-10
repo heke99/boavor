@@ -6,6 +6,7 @@ import type {
   ListingInquiryItem,
   ListingSegment,
   ListingType,
+  ManagedListingDetailItem,
   ManagedListingItem,
   PropertyType,
   RentalApplicationItem,
@@ -14,11 +15,13 @@ import type {
   InquiryStatus,
   InquiryType,
 } from '@/lib/types'
+import { calculateApplicationScore } from '@/lib/dashboard/profile-score'
 import { getDashboardProfile } from '@/lib/data/profile'
 import { getListingBySlug } from '@/lib/data/listings'
 
 type RentalApplicationRow = {
   id: string
+  listing_id: string | null
   status: RentalApplicationStatus
   created_at: string
   cover_letter: string | null
@@ -66,10 +69,12 @@ type ListingRow = {
   rooms: number | string | null
   area_sqm: number | string | null
   created_at: string
+  updated_at?: string | null
 }
 
 type InquiryRow = {
   id: string
+  listing_id?: string | null
   status: InquiryStatus
   inquiry_type: InquiryType
   created_at: string
@@ -128,7 +133,7 @@ export async function getUserApplications() {
     supabase
       .from('rental_applications')
       .select(
-        'id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size'
+        'id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size'
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
@@ -161,13 +166,38 @@ export async function getUserApplications() {
     documentMap.set(row.application_id, current)
   }
 
+  const listingIds = Array.from(new Set(((applications ?? []) as RentalApplicationRow[]).map((row) => row.listing_id).filter(Boolean))) as string[]
+  const { data: listingApplicationRows } = listingIds.length
+    ? await supabase.from('rental_applications').select('listing_id').in('listing_id', listingIds)
+    : { data: [] }
+
+  const applicantsCountMap = new Map<string, number>()
+  for (const row of (listingApplicationRows ?? []) as Array<{ listing_id: string }>) {
+    applicantsCountMap.set(row.listing_id, (applicantsCountMap.get(row.listing_id) ?? 0) + 1)
+  }
+
   return ((applications ?? []) as RentalApplicationRow[]).map((row) => ({
     id: row.id,
+    listingId: row.listing_id,
     status: row.status,
     createdAt: row.created_at,
     coverLetter: row.cover_letter,
     queuePointsSnapshot: row.queue_points_snapshot,
     queueJoinedAtSnapshot: row.queue_joined_at_snapshot,
+    applicantsCountForListing: row.listing_id ? applicantsCountMap.get(row.listing_id) ?? 1 : 1,
+    applicantScore: calculateApplicationScore({
+      id: row.id,
+      listingId: row.listing_id,
+      status: row.status,
+      createdAt: row.created_at,
+      coverLetter: row.cover_letter,
+      queuePointsSnapshot: row.queue_points_snapshot,
+      queueJoinedAtSnapshot: row.queue_joined_at_snapshot,
+      listing: { slug: row.listing_slug, title: row.listing_title, city: row.listing_city, listingType: row.listing_type, price: row.listing_price, imageUrl: row.listing_image_url },
+      applicant: { fullName: row.applicant_full_name, email: row.applicant_email, phone: row.applicant_phone, monthlyIncome: row.applicant_monthly_income, householdSize: row.applicant_household_size },
+      coApplicants: (coApplicantMap.get(row.id) ?? []).map((item) => ({ fullName: item.full_name, email: item.email, phone: item.phone, relationship: item.relationship })),
+      documents: (documentMap.get(row.id) ?? []).map((item) => ({ fileName: item.file_name, fileUrl: item.file_url, documentType: item.document_type })),
+    }),
     listing: {
       slug: row.listing_slug,
       title: row.listing_title,
@@ -260,7 +290,7 @@ export async function getOwnerDashboardData() {
   const incomingQuery = supabase
     .from('rental_applications')
     .select(
-      'id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size'
+      'id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size'
     )
     .order('created_at', { ascending: false })
     .limit(20)
@@ -308,6 +338,7 @@ export async function getOwnerDashboardData() {
 
   const applications: RentalApplicationItem[] = ((incomingApplications ?? []) as RentalApplicationRow[]).map((row) => ({
     id: row.id,
+    listingId: row.listing_id,
     status: row.status,
     createdAt: row.created_at,
     coverLetter: row.cover_letter,
@@ -343,7 +374,7 @@ export async function getOwnerDashboardData() {
 
   let inquiriesQuery = supabase
     .from('listing_inquiries')
-    .select('id, status, inquiry_type, created_at, message, internal_note, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
+    .select('id, listing_id, status, inquiry_type, created_at, message, internal_note, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
     .order('created_at', { ascending: false })
     .limit(30)
 
@@ -360,6 +391,7 @@ export async function getOwnerDashboardData() {
 
   const inquiries: ListingInquiryItem[] = ((incomingInquiries ?? []) as InquiryRow[]).map((row) => ({
     id: row.id,
+    listingId: row.listing_id,
     status: row.status,
     inquiryType: row.inquiry_type,
     createdAt: row.created_at,
@@ -403,5 +435,194 @@ export function buildListingSnapshot(listing: ListingCardItem) {
     listingSegment: listing.listingSegment,
     price: listing.price,
     imageUrl: listing.imageUrl,
+  }
+}
+
+type ManagedListingDetailRow = ListingRow & {
+  description: string | null
+  street: string | null
+  area_name: string | null
+  available_from: string | null
+}
+
+type ListingImageRow = {
+  id: string
+  image_url: string
+  alt_text: string | null
+  is_cover: boolean
+  position: number
+}
+
+function mapApplicationRows(
+  rows: RentalApplicationRow[],
+  coApplicants: ApplicationCoApplicantRow[],
+  documents: ApplicationDocumentRow[],
+) {
+  const coApplicantMap = new Map<string, ApplicationCoApplicantRow[]>()
+  for (const row of coApplicants) {
+    const current = coApplicantMap.get(row.application_id) ?? []
+    current.push(row)
+    coApplicantMap.set(row.application_id, current)
+  }
+
+  const documentMap = new Map<string, ApplicationDocumentRow[]>()
+  for (const row of documents) {
+    const current = documentMap.get(row.application_id) ?? []
+    current.push(row)
+    documentMap.set(row.application_id, current)
+  }
+
+  return rows.map((row) => {
+    const item: RentalApplicationItem = {
+      id: row.id,
+      listingId: row.listing_id,
+      status: row.status,
+      createdAt: row.created_at,
+      coverLetter: row.cover_letter,
+      queuePointsSnapshot: row.queue_points_snapshot,
+      queueJoinedAtSnapshot: row.queue_joined_at_snapshot,
+      listing: {
+        slug: row.listing_slug,
+        title: row.listing_title,
+        city: row.listing_city,
+        listingType: row.listing_type,
+        price: row.listing_price,
+        imageUrl: row.listing_image_url,
+      },
+      applicant: {
+        fullName: row.applicant_full_name,
+        email: row.applicant_email,
+        phone: row.applicant_phone,
+        monthlyIncome: row.applicant_monthly_income,
+        householdSize: row.applicant_household_size,
+      },
+      coApplicants: (coApplicantMap.get(row.id) ?? []).map((applicant) => ({
+        fullName: applicant.full_name,
+        email: applicant.email,
+        phone: applicant.phone,
+        relationship: applicant.relationship,
+      })),
+      documents: (documentMap.get(row.id) ?? []).map((document) => ({
+        fileName: document.file_name,
+        fileUrl: document.file_url,
+        documentType: document.document_type,
+      })),
+    }
+
+    item.applicantScore = calculateApplicationScore(item)
+    return item
+  })
+}
+
+export async function getManagedListingDetail(listingId: string): Promise<ManagedListingDetailItem | null> {
+  const { supabase, user } = await requireSignedInUser()
+  const { isSignedIn, profile } = await getDashboardProfile()
+  if (!isSignedIn || !profile) redirect('/login')
+
+  const companyIds = profile.companies.map((company) => company.companyId)
+
+  const { data: listing, error } = await supabase
+    .from('listings')
+    .select('id, slug, title, description, street, area_name, available_from, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .eq('id', listingId)
+    .maybeSingle<ManagedListingDetailRow & { created_by: string | null; company_id: string | null }>()
+
+  if (error) {
+    console.error('Failed to fetch managed listing detail', error)
+    return null
+  }
+
+  if (!listing) return null
+
+  const ownsListing = listing.created_by === user.id || (listing.company_id ? companyIds.includes(listing.company_id) : false)
+  if (!ownsListing && !['admin', 'super_admin'].includes(profile.role)) return null
+
+  const [{ data: images }, { data: applicationRows }, { data: inquiryRows }] = await Promise.all([
+    supabase
+      .from('listing_images')
+      .select('id, image_url, alt_text, is_cover, position')
+      .eq('listing_id', listingId)
+      .order('position', { ascending: true }),
+    supabase
+      .from('rental_applications')
+      .select('id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('listing_inquiries')
+      .select('id, listing_id, status, inquiry_type, created_at, message, internal_note, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false }),
+  ])
+
+  const applicationIds = ((applicationRows ?? []) as RentalApplicationRow[]).map((item) => item.id)
+  const [{ data: coApplicants }, { data: documents }] = applicationIds.length
+    ? await Promise.all([
+        supabase.from('rental_application_co_applicants').select('application_id, full_name, email, phone, relationship').in('application_id', applicationIds),
+        supabase.from('rental_application_documents').select('application_id, file_name, file_url, document_type').in('application_id', applicationIds),
+      ])
+    : [{ data: [] }, { data: [] }]
+
+  const applications = mapApplicationRows(
+    (applicationRows ?? []) as RentalApplicationRow[],
+    (coApplicants ?? []) as ApplicationCoApplicantRow[],
+    (documents ?? []) as ApplicationDocumentRow[],
+  )
+
+  const inquiries: ListingInquiryItem[] = ((inquiryRows ?? []) as InquiryRow[]).map((row) => ({
+    id: row.id,
+    listingId: row.listing_id ?? null,
+    status: row.status,
+    inquiryType: row.inquiry_type,
+    createdAt: row.created_at,
+    message: row.message,
+    internalNote: row.internal_note ?? null,
+    preferredContactMethod: row.preferred_contact_method,
+    requester: {
+      fullName: row.requester_full_name,
+      email: row.requester_email,
+      phone: row.requester_phone,
+      companyName: row.requester_company_name,
+    },
+    listing: {
+      slug: row.listing_slug,
+      title: row.listing_title,
+      city: row.listing_city,
+      listingType: row.listing_type,
+      listingSegment: row.listing_segment,
+      price: row.listing_price,
+    },
+  }))
+
+  return {
+    id: listing.id,
+    slug: listing.slug,
+    title: listing.title,
+    city: listing.city,
+    listingType: listing.listing_type,
+    listingSegment: listing.listing_segment ?? 'residential',
+    propertyType: listing.property_type,
+    commercialType: listing.commercial_type,
+    status: listing.status,
+    price: listing.price,
+    rooms: toNumber(listing.rooms),
+    areaSqm: toNumber(listing.area_sqm),
+    createdAt: listing.created_at,
+    updatedAt: listing.updated_at ?? null,
+    applicationsCount: applications.length,
+    inquiriesCount: inquiries.length,
+    description: listing.description,
+    street: listing.street,
+    areaName: listing.area_name,
+    availableFrom: listing.available_from,
+    images: ((images ?? []) as ListingImageRow[]).map((image) => ({
+      id: image.id,
+      imageUrl: image.image_url,
+      altText: image.alt_text,
+      isCover: image.is_cover,
+      position: image.position,
+    })),
+    applications,
+    inquiries,
   }
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import type { AppRole, CompanyType, LegalForm } from '@/lib/types'
+import type { AccountType, AppRole, CompanyType, LegalForm, PreferredListingIntent } from '@/lib/types'
 
 const COMPANY_ROLES: AppRole[] = ['landlord', 'broker', 'company_admin']
 
@@ -46,6 +46,10 @@ export async function saveProfileAction(formData: FormData) {
     phone: String(formData.get('phone') ?? '').trim(),
     city: String(formData.get('city') ?? '').trim(),
     role,
+    account_type: String(formData.get('accountType') ?? 'private') as AccountType,
+    personal_identity_number: String(formData.get('personalIdentityNumber') ?? '').trim() || null,
+    preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both') as PreferredListingIntent,
+    marketing_consent: formData.get('marketingConsent') === 'on',
     household_size: Number(formData.get('householdSize') ?? 1) || null,
     has_pets: formData.get('hasPets') === 'on',
     employment_status: String(formData.get('employmentStatus') ?? '').trim(),
@@ -164,6 +168,9 @@ export async function addProfileDocumentAction(formData: FormData) {
     file_name: fileName,
     file_url: fileUrl,
     document_type: String(formData.get('documentType') ?? 'general').trim() || 'general',
+    document_status: 'active',
+    document_expires_at: String(formData.get('documentExpiresAt') ?? '').trim() || null,
+    is_default_for_applications: formData.get('isDefaultForApplications') === 'on',
   })
 
   revalidatePath('/dashboard/profile')
@@ -278,4 +285,31 @@ export async function resumeQueueMembershipAction() {
   }
 
   revalidatePath('/dashboard/profile')
+}
+
+export async function updateNotificationSettingsAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+
+  await supabase
+    .from('profiles')
+    .update({
+      marketing_consent: formData.get('marketingConsent') === 'on',
+      preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both'),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  revalidatePath('/dashboard/settings')
+}
+
+export async function updatePasswordAction(formData: FormData) {
+  const { supabase } = await requireUser()
+  const password = String(formData.get('password') ?? '')
+  const confirmPassword = String(formData.get('confirmPassword') ?? '')
+
+  if (!password || password.length < 8) throw new Error('Lösenordet måste vara minst 8 tecken.')
+  if (password !== confirmPassword) throw new Error('Lösenorden matchar inte.')
+
+  await supabase.auth.updateUser({ password })
+  revalidatePath('/dashboard/settings')
 }

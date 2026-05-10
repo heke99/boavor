@@ -46,15 +46,23 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <Input name="lastName" placeholder="Efternamn" defaultValue={profile.lastName} />
               <Input value={profile.email} readOnly disabled className="opacity-70" />
               <Input name="phone" placeholder="Telefon" defaultValue={profile.phone} />
+              <Select name="accountType" defaultValue={profile.accountType ?? 'private'}>
+                <option value="private">Privatperson</option>
+                <option value="company">Företag</option>
+              </Select>
+              <Input name="personalIdentityNumber" placeholder="Personnummer" defaultValue={profile.personalIdentityNumber ?? ''} />
+              <Select name="preferredListingIntent" defaultValue={profile.preferredListingIntent ?? 'both'}>
+                <option value="rent">Främst hyra</option>
+                <option value="buy">Främst köpa</option>
+                <option value="both">Både hyra och köpa</option>
+              </Select>
               <Select name="role" defaultValue={profile.role}>
                 <option value="seeker">Hyresgäst / bostadssökande</option>
                 <option value="buyer">Köpare</option>
                 <option value="landlord">Hyresvärd</option>
                 <option value="broker">Mäklare</option>
                 <option value="company_admin">Bolagsadmin / fastighetsbolag</option>
-                <option value="admin">Admin</option>
-                <option value="super_admin">Superadmin</option>
-              </Select>
+                              </Select>
               <Input name="city" placeholder="Stad" defaultValue={profile.city} />
               <Input name="householdSize" type="number" min={1} placeholder="Hushållsstorlek" defaultValue={profile.householdSize ?? undefined} />
               <Select name="employmentStatus" defaultValue={profile.employmentStatus || 'employed'}>
@@ -67,6 +75,10 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <Input name="employerName" placeholder="Arbetsgivare" defaultValue={profile.employerName} />
               <Input name="monthlyIncome" type="number" min={0} placeholder="Månadsinkomst" defaultValue={profile.monthlyIncome ?? undefined} />
               <Input name="desiredMoveIn" type="date" placeholder="Önskat inflyttningsdatum" defaultValue={profile.desiredMoveIn ?? undefined} />
+              <label className="flex items-center gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm text-[var(--foreground)]">
+                <input type="checkbox" name="marketingConsent" defaultChecked={profile.marketingConsent ?? false} />
+                Bostadstips via e-post
+              </label>
             </div>
 
             <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">

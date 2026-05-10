@@ -107,7 +107,10 @@ export default async function DashboardListingsPage() {
                           <div className="min-w-[210px] space-y-3 xl:text-right">
                             <div className="text-lg font-semibold text-[var(--primary)]">{formatCurrency(listing.price, listing.listingType)}</div>
                             <div className="flex flex-wrap gap-2 xl:justify-end">
-                              <Button href={`/listing/${listing.slug}`} variant="ghost" className="border border-black/8 px-3 py-2 text-xs">
+                              <Button href={`/dashboard/listings/${listing.id}`} variant="secondary" className="px-3 py-2 text-xs">
+                                Öppna
+                              </Button>
+                              <Button href={`/listing/${listing.slug}`} variant="ghost" className="border border-black/8 px-3 py-2 text-xs !text-[#111827]">
                                 Förhandsvisa
                               </Button>
                               <form action={updateListingStatusAction} className="flex gap-2">

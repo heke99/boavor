@@ -15,6 +15,13 @@ type ProfileRow = {
   last_name: string | null
   phone: string | null
   role: AppRole
+  account_type?: DashboardProfileItem['accountType'] | null
+  personal_identity_number?: string | null
+  preferred_listing_intent?: DashboardProfileItem['preferredListingIntent'] | null
+  terms_accepted_at?: string | null
+  privacy_accepted_at?: string | null
+  personal_identity_consent_at?: string | null
+  marketing_consent?: boolean | null
   city: string | null
   household_size: number | null
   has_pets: boolean
@@ -39,6 +46,9 @@ type ProfileDocumentRow = {
   file_name: string
   file_url: string
   document_type: string
+  document_status?: 'active' | 'expired' | 'replaced' | null
+  document_expires_at?: string | null
+  is_default_for_applications?: boolean | null
   created_at: string
 }
 
@@ -161,7 +171,7 @@ export async function getDashboardProfile() {
   const { data: profileRow } = await supabase
     .from('profiles')
     .select(
-      'id, first_name, last_name, phone, role, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
+      'id, first_name, last_name, phone, role, account_type, personal_identity_number, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
     )
     .eq('id', user.id)
     .maybeSingle<ProfileRow>()
@@ -174,7 +184,7 @@ export async function getDashboardProfile() {
 
   const { data: documents } = await supabase
     .from('profile_documents')
-    .select('id, file_name, file_url, document_type, created_at')
+    .select('id, file_name, file_url, document_type, document_status, document_expires_at, is_default_for_applications, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -205,6 +215,13 @@ export async function getDashboardProfile() {
     lastName: profileRow?.last_name ?? '',
     phone: profileRow?.phone ?? '',
     role: profileRow?.role ?? 'seeker',
+    accountType: profileRow?.account_type ?? 'private',
+    personalIdentityNumber: profileRow?.personal_identity_number ?? null,
+    preferredListingIntent: profileRow?.preferred_listing_intent ?? 'both',
+    termsAcceptedAt: profileRow?.terms_accepted_at ?? null,
+    privacyAcceptedAt: profileRow?.privacy_accepted_at ?? null,
+    personalIdentityConsentAt: profileRow?.personal_identity_consent_at ?? null,
+    marketingConsent: profileRow?.marketing_consent ?? false,
     city: profileRow?.city ?? '',
     householdSize: profileRow?.household_size ?? null,
     hasPets: profileRow?.has_pets ?? false,
@@ -226,6 +243,9 @@ export async function getDashboardProfile() {
       fileName: item.file_name,
       fileUrl: item.file_url,
       documentType: item.document_type,
+      documentStatus: item.document_status ?? 'active',
+      documentExpiresAt: item.document_expires_at ?? null,
+      isDefaultForApplications: item.is_default_for_applications ?? false,
       createdAt: item.created_at,
     })),
     queueMembership: membership

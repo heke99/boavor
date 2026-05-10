@@ -197,6 +197,9 @@ export type ProfileDocumentItem = {
   fileName: string
   fileUrl: string
   documentType: string
+  documentStatus?: 'active' | 'expired' | 'replaced'
+  documentExpiresAt?: string | null
+  isDefaultForApplications?: boolean
   createdAt: string
 }
 
@@ -271,11 +274,14 @@ export type ProfileFormValues = {
 
 export type RentalApplicationItem = {
   id: string
+  listingId?: string | null
   status: RentalApplicationStatus
   createdAt: string
   coverLetter: string | null
   queuePointsSnapshot: number
   queueJoinedAtSnapshot: string | null
+  applicantsCountForListing?: number
+  applicantScore?: number
   listing: {
     slug: string
     title: string
@@ -320,11 +326,23 @@ export type ManagedListingItem = {
   createdAt: string
   applicationsCount: number
   inquiriesCount?: number
+  updatedAt?: string | null
+}
+
+export type ManagedListingDetailItem = ManagedListingItem & {
+  description: string | null
+  street: string | null
+  areaName: string | null
+  availableFrom: string | null
+  images: Array<{ id: string; imageUrl: string; altText: string | null; isCover: boolean; position: number }>
+  applications: RentalApplicationItem[]
+  inquiries: ListingInquiryItem[]
 }
 
 
 export type ListingInquiryItem = {
   id: string
+  listingId?: string | null
   status: InquiryStatus
   inquiryType: InquiryType
   createdAt: string
