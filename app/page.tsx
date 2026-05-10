@@ -1,15 +1,17 @@
 import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
+import { Suspense } from 'react'
 import { HeroSearch } from '@/components/home/HeroSearch'
 import { StatsStrip } from '@/components/home/StatsStrip'
 import { AreaGrid } from '@/components/home/AreaGrid'
 import { FeatureCards } from '@/components/home/FeatureCards'
 import { ListingGrid } from '@/components/listings/ListingGrid'
-import { mockListings } from '@/lib/mock-data'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
-import { Suspense } from 'react'
+import { getPublishedListings } from '@/lib/data/listings'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const featuredListings = await getPublishedListings({}, { limit: 6 })
+
   return (
     <>
       <section
@@ -76,14 +78,14 @@ export default function HomePage() {
             </div>
 
             <div>
-            <Suspense
-              fallback={
-                <div className="h-[520px] rounded-[36px] border border-white/20 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]" />
-              }
-            >
-              <HeroSearch />
-            </Suspense>
-          </div>
+              <Suspense
+                fallback={
+                  <div className="h-[520px] rounded-[36px] border border-white/20 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]" />
+                }
+              >
+                <HeroSearch />
+              </Suspense>
+            </div>
           </div>
 
           <div className="mt-10">
@@ -96,10 +98,10 @@ export default function HomePage() {
         <SectionHeading
           eyebrow="Utvalda objekt"
           title="Bostäder och kommersiella objekt i samma flöde"
-          description="Bovaro kan nu visa bostäder, lokaler, kontor, parkeringar och andra kommersiella objekt med samma listing-motor."
+          description="Bovaro visar nu riktiga publicerade objekt från Supabase. Kör seed-SQL-filen om listan är tom i din lokala databas."
         />
         <div className="mt-8">
-          <ListingGrid listings={mockListings.slice(0, 6)} />
+          <ListingGrid listings={featuredListings} />
         </div>
       </section>
 
