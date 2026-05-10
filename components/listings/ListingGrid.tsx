@@ -8,7 +8,7 @@ export function ListingGrid({ listings }: { listings: ListingCardItem[] }) {
       <Card className="p-10 text-center">
         <h2 className="text-2xl font-semibold">Inga objekt hittades</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-          Datamodellen är nu kopplad till verkliga tabeller. Lägg in seeddata via SQL-filen eller publicera fler objekt för att fylla listan.
+          Just nu finns inga publicerade objekt som matchar sökningen. Ändra filtren eller kom tillbaka senare.
         </p>
       </Card>
     )

@@ -98,7 +98,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Utvalda objekt"
           title="Bostäder och kommersiella objekt i samma flöde"
-          description="Bovaro visar nu riktiga publicerade objekt från Supabase. Kör seed-SQL-filen om listan är tom i din lokala databas."
+          description="Se aktuella bostäder, lokaler, parkeringar, förråd, mark och fastighetsobjekt som är publicerade på Bovaro."
         />
         <div className="mt-8">
           <ListingGrid listings={featuredListings} />
@@ -118,7 +118,7 @@ export default async function HomePage() {
               Publicera, strukturera och få bättre koll på ansökningar, intresseanmälningar och leads.
             </h2>
             <p className="mt-4 text-base leading-7 text-white/78">
-              Bovaro är byggt för att kunna växa till ett riktigt arbetsverktyg för bostäder, kommersiella lokaler, parkering, förråd, mark och fastighetsobjekt.
+              Bovaro ger annonsörer ett samlat arbetsflöde för bostäder, kommersiella lokaler, parkering, förråd, mark och fastighetsobjekt.
             </p>
             <div className="mt-6">
               <Button

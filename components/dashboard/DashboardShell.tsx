@@ -12,6 +12,7 @@ import {
   WalletCards,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 
 const navItems = [
   { href: '/dashboard', label: 'Översikt', icon: LayoutDashboard },
@@ -47,7 +48,7 @@ export function DashboardShell({
             </div>
             <div className="mt-2 text-xl font-semibold">Dashboard</div>
             <div className="mt-2 text-sm leading-6 text-white/80">
-              Profil, ansökningar, dokument, objekt och leads i ett arbetsflöde.
+              Hantera profil, ansökningar, dokument, objekt och leads i ett samlat arbetsflöde.
             </div>
           </div>
           <nav className="space-y-1">
@@ -71,6 +72,9 @@ export function DashboardShell({
               )
             })}
           </nav>
+          <div className="mt-4 border-t border-[#eef0f6] pt-4">
+            <LogoutButton className="w-full" />
+          </div>
         </aside>
 
         <div className="space-y-6">

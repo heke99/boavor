@@ -1,7 +1,32 @@
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export default function LoginPage() {
+function safeNextPath(value: string | undefined) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard'
+  return value
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ next?: string }>
+}) {
+  const params = await searchParams
+  const nextPath = safeNextPath(params?.next)
+  const supabase = await createSupabaseServerClient()
+
+  if (supabase) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      redirect(nextPath)
+    }
+  }
+
   return (
     <section className="bg-[#f6f7fb] py-14 md:py-20">
       <div className="container-shell">

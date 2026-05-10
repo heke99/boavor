@@ -9,12 +9,13 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 
 const navItems = [
   { href: '/admin', label: 'Översikt', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Användare', icon: Users },
   { href: '/admin/companies', label: 'Företag', icon: Building2 },
-  { href: '/admin/listings', label: 'Listings', icon: ClipboardList },
+  { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
 ]
@@ -40,7 +41,7 @@ export function AdminShell({
             </div>
             <div className="mt-2 text-xl font-semibold">Systemkontroll</div>
             <div className="mt-2 text-sm leading-6 text-white/80">
-              Användare, företag, objekt, ansökningar och leads.
+              Hantera användare, företag, objekt, ansökningar och leads.
             </div>
           </div>
           <nav className="space-y-1">
@@ -64,12 +65,15 @@ export function AdminShell({
               )
             })}
           </nav>
+          <div className="mt-4 border-t border-[#eef0f6] pt-4">
+            <LogoutButton className="w-full" />
+          </div>
         </aside>
 
         <div className="space-y-6">
           <div>
             <div className="inline-flex rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#243b8f]">
-              Admin dashboard
+              Admin
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-[#111827]">{title}</h1>
             {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6b7280]">{description}</p> : null}
