@@ -74,6 +74,7 @@ type InquiryRow = {
   inquiry_type: InquiryType
   created_at: string
   message: string | null
+  internal_note?: string | null
   preferred_contact_method: string | null
   requester_full_name: string
   requester_email: string
@@ -342,7 +343,7 @@ export async function getOwnerDashboardData() {
 
   let inquiriesQuery = supabase
     .from('listing_inquiries')
-    .select('id, status, inquiry_type, created_at, message, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
+    .select('id, status, inquiry_type, created_at, message, internal_note, preferred_contact_method, requester_full_name, requester_email, requester_phone, requester_company_name, listing_slug, listing_title, listing_city, listing_type, listing_segment, listing_price')
     .order('created_at', { ascending: false })
     .limit(30)
 
@@ -363,6 +364,7 @@ export async function getOwnerDashboardData() {
     inquiryType: row.inquiry_type,
     createdAt: row.created_at,
     message: row.message,
+    internalNote: row.internal_note ?? null,
     preferredContactMethod: row.preferred_contact_method,
     requester: {
       fullName: row.requester_full_name,

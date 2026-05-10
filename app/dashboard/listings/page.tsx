@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { ListingCreateForm } from '@/components/dashboard/ListingCreateForm'
-import { createListingAction, updateApplicationStatusAction, updateInquiryStatusAction } from './actions'
+import { createListingAction, updateApplicationStatusAction, updateInquiryStatusAction, updateListingStatusAction } from './actions'
 import { getOwnerDashboardData } from '@/lib/data/rental-applications'
 import { formatCurrency } from '@/lib/utils'
 import { getListingPrimaryMeta } from '@/lib/listing-options'
@@ -24,6 +24,15 @@ const inquiryStatusOptions = [
   { value: 'negotiating', label: 'Förhandlar' },
   { value: 'closed', label: 'Avslutad' },
   { value: 'rejected', label: 'Avvisad' },
+]
+
+const listingStatusOptions = [
+  { value: 'published', label: 'Publicerad' },
+  { value: 'draft', label: 'Utkast' },
+  { value: 'paused', label: 'Pausad' },
+  { value: 'rented', label: 'Uthyrd' },
+  { value: 'sold', label: 'Såld' },
+  { value: 'archived', label: 'Arkiverad' },
 ]
 
 export default async function DashboardListingsPage() {
@@ -80,7 +89,7 @@ export default async function DashboardListingsPage() {
                     const meta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
                     return (
                       <div key={listing.id} className="rounded-2xl border border-black/8 p-4">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                           <div>
                             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                               {meta} · {listing.listingType === 'rent' ? 'Hyra' : 'Till salu'} · {listing.status}
@@ -89,10 +98,30 @@ export default async function DashboardListingsPage() {
                             <div className="mt-2 text-sm text-[var(--muted)]">
                               {listing.city} · {listing.areaSqm} m² {listing.listingSegment === 'residential' ? `· ${listing.rooms} rum` : ''}
                             </div>
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                              <span className="rounded-full bg-black/5 px-3 py-1">{listing.applicationsCount} ansökningar</span>
+                              <span className="rounded-full bg-black/5 px-3 py-1">{listing.inquiriesCount ?? 0} leads</span>
+                              <span className="rounded-full bg-black/5 px-3 py-1">Skapad {new Date(listing.createdAt).toLocaleDateString('sv-SE')}</span>
+                            </div>
                           </div>
-                          <div className="text-right">
+                          <div className="min-w-[210px] space-y-3 xl:text-right">
                             <div className="text-lg font-semibold text-[var(--primary)]">{formatCurrency(listing.price, listing.listingType)}</div>
-                            <div className="mt-2 text-sm text-[var(--muted)]">{listing.applicationsCount} ansökningar · {listing.inquiriesCount ?? 0} leads</div>
+                            <div className="flex flex-wrap gap-2 xl:justify-end">
+                              <Button href={`/listing/${listing.slug}`} variant="ghost" className="border border-black/8 px-3 py-2 text-xs">
+                                Förhandsvisa
+                              </Button>
+                              <form action={updateListingStatusAction} className="flex gap-2">
+                                <input type="hidden" name="listingId" value={listing.id} />
+                                <Select name="status" defaultValue={listing.status} className="h-10 min-w-[120px] text-xs">
+                                  {listingStatusOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                  ))}
+                                </Select>
+                                <Button type="submit" variant="secondary" className="px-3 py-2 text-xs">
+                                  Spara
+                                </Button>
+                              </form>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -183,6 +212,13 @@ export default async function DashboardListingsPage() {
                             </option>
                           ))}
                         </Select>
+                        <textarea
+                          name="internalNote"
+                          defaultValue={inquiry.internalNote ?? ''}
+                          rows={3}
+                          placeholder="Intern anteckning"
+                          className="rounded-2xl border border-black/10 px-4 py-3 text-sm"
+                        />
                         <Button type="submit" variant="secondary">Uppdatera lead</Button>
                       </form>
                     </div>

@@ -9,8 +9,8 @@ export default async function DashboardPage() {
   const [{ isSignedIn, profile }, userApplications] = await Promise.all([getDashboardProfile(), getUserApplications().catch(() => [])])
 
   const ownerData = isSignedIn && profile && ['landlord', 'broker', 'company_admin', 'admin', 'super_admin'].includes(profile.role)
-    ? await getOwnerDashboardData().catch(() => ({ listings: [], incomingApplications: [], profile }))
-    : { listings: [], incomingApplications: [], profile }
+    ? await getOwnerDashboardData().catch(() => ({ listings: [], incomingApplications: [], incomingInquiries: [], profile }))
+    : { listings: [], incomingApplications: [], incomingInquiries: [], profile }
 
   return (
     <DashboardShell activePath="/dashboard" title="Din dashboard" description="Här samlar Bovaro översikt, profil, ansökningar och objekt i ett arbetsflöde som känns som en riktig plattform.">
@@ -31,9 +31,9 @@ export default async function DashboardPage() {
           <p className="mt-3 text-sm text-[var(--muted)]">Skapa, publicera och följ objekt från samma dashboard.</p>
         </Card>
         <Card className="p-6">
-          <div className="text-sm text-[var(--muted)]">Inkomna ansökningar</div>
-          <div className="mt-2 text-3xl font-semibold">{ownerData.incomingApplications.length}</div>
-          <p className="mt-3 text-sm text-[var(--muted)]">Se profil, dokument och status på kandidater.</p>
+          <div className="text-sm text-[var(--muted)]">Nya leads</div>
+          <div className="mt-2 text-3xl font-semibold">{ownerData.incomingInquiries.length}</div>
+          <p className="mt-3 text-sm text-[var(--muted)]">Intresseanmälningar, visningar och offertförfrågningar.</p>
         </Card>
       </div>
 
@@ -57,6 +57,9 @@ export default async function DashboardPage() {
           <Button href="/dashboard/applications">Gå till ansökningar</Button>
           <Button href="/dashboard/listings" variant="ghost" className="border border-black/8">
             Öppna annonsörsportal
+          </Button>
+          <Button href="/dashboard/inquiries" variant="secondary">
+            Hantera leads
           </Button>
         </div>
       </Card>

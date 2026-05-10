@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, UserCircle2, Heart, SearchCheck, Building2, FileText } from 'lucide-react'
+import { LayoutDashboard, UserCircle2, Heart, SearchCheck, Building2, FileText, Inbox } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
   { href: '/dashboard/saved-searches', label: 'Sparade sökningar', icon: SearchCheck },
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
+  { href: '/dashboard/inquiries', label: 'Leads', icon: Inbox },
 ]
 
 export function DashboardShell({

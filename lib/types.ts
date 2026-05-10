@@ -329,6 +329,7 @@ export type ListingInquiryItem = {
   inquiryType: InquiryType
   createdAt: string
   message: string | null
+  internalNote?: string | null
   preferredContactMethod: string | null
   requester: {
     fullName: string

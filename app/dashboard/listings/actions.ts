@@ -206,6 +206,7 @@ export async function updateInquiryStatusAction(formData: FormData) {
   const { supabase, user } = await requireSignedInUser()
   const inquiryId = String(formData.get('inquiryId') ?? '')
   const status = String(formData.get('status') ?? 'contacted') as InquiryStatus
+  const internalNote = String(formData.get('internalNote') ?? '').trim() || null
   if (!inquiryId) return
 
   const { data: membership } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
@@ -231,6 +232,44 @@ export async function updateInquiryStatusAction(formData: FormData) {
   const canManage = inquiry.landlord_user_id === user.id || (inquiry.landlord_company_id && companyIds.includes(inquiry.landlord_company_id)) || ownsListing
   if (!canManage) return
 
-  await supabase.from('listing_inquiries').update({ status }).eq('id', inquiryId)
+  await supabase
+    .from('listing_inquiries')
+    .update({ status, internal_note: internalNote })
+    .eq('id', inquiryId)
+
   revalidatePath('/dashboard/listings')
+  revalidatePath('/dashboard/inquiries')
 }
+
+export async function updateListingStatusAction(formData: FormData) {
+  const { supabase, user } = await requireSignedInUser()
+  const listingId = String(formData.get('listingId') ?? '')
+  const status = String(formData.get('status') ?? 'paused') as ListingStatus
+  if (!listingId) return
+
+  const { data: membership } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
+  const companyIds = (membership ?? []).map((item) => item.company_id)
+
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id, created_by, company_id')
+    .eq('id', listingId)
+    .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
+
+  if (!listing) return
+
+  const canManage = listing.created_by === user.id || Boolean(listing.company_id && companyIds.includes(listing.company_id))
+  if (!canManage) return
+
+  await supabase
+    .from('listings')
+    .update({
+      status,
+      published_at: status === 'published' ? new Date().toISOString() : null,
+    })
+    .eq('id', listingId)
+
+  revalidatePath('/dashboard/listings')
+  revalidatePath('/listings')
+}
+
