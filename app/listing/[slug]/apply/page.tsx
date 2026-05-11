@@ -23,7 +23,7 @@ export default async function ApplyPage({ params }: Props) {
     <DashboardShell
       activePath="/dashboard/applications"
       title="Ansök om bostad"
-      description="Din profil är förifylld för att göra ansökan snabb. Köpoäng syns som extra merit för hyresvärden, men avgör inte valet automatiskt."
+      description="Skicka en komplett ansökan med profil, dokument, medsökande och personligt meddelande."
     >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="p-6">
@@ -100,6 +100,26 @@ export default async function ApplyPage({ params }: Props) {
               ) : (
                 <p className="text-sm text-[var(--muted)]">Du har inga dokument sparade ännu på profilen.</p>
               )}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-xl font-semibold">Ansökningsuppgifter</h3>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <Input name="moveInDate" type="date" />
+              <Input name="monthlyIncome" type="number" min={0} placeholder="Månadsinkomst" defaultValue={profile.monthlyIncome ?? undefined} />
+              <Input name="employmentType" placeholder="Anställningsform" defaultValue={profile.employmentStatus || undefined} />
+              <Input name="householdSize" type="number" min={1} placeholder="Hushållsstorlek" defaultValue={profile.householdSize ?? undefined} />
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="flex items-center gap-3 rounded-2xl border border-black/8 px-4 py-3 text-sm">
+                <input type="checkbox" name="pets" />
+                Jag har husdjur
+              </label>
+              <label className="flex items-center gap-3 rounded-2xl border border-black/8 px-4 py-3 text-sm">
+                <input type="checkbox" name="smoking" />
+                Rökning förekommer i hushållet
+              </label>
             </div>
           </Card>
 

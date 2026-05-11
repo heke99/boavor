@@ -10,6 +10,12 @@ export async function submitRentalApplication(formData: FormData) {
   const coverLetter = String(formData.get('coverLetter') ?? '').trim() || null
   const selectedCoApplicants = formData.getAll('coApplicantIds').map(String)
   const selectedDocuments = formData.getAll('documentIds').map(String)
+  const moveInDate = String(formData.get('moveInDate') ?? '').trim() || null
+  const monthlyIncomeValue = String(formData.get('monthlyIncome') ?? '').trim()
+  const householdSizeValue = String(formData.get('householdSize') ?? '').trim()
+  const employmentType = String(formData.get('employmentType') ?? '').trim() || null
+  const pets = formData.get('pets') === 'on'
+  const smoking = formData.get('smoking') === 'on'
 
   const { supabase, user } = await (await import('@/lib/data/rental-applications')).requireSignedInUser()
   const { listing, profile } = await getApplyPageData(slug)
@@ -36,11 +42,17 @@ export async function submitRentalApplication(formData: FormData) {
       applicant_full_name: buildApplicantFullName(profile),
       applicant_email: profile.email,
       applicant_phone: profile.phone || null,
-      applicant_monthly_income: profile.monthlyIncome,
-      applicant_household_size: profile.householdSize,
+      applicant_monthly_income: monthlyIncomeValue ? Number(monthlyIncomeValue) : profile.monthlyIncome,
+      applicant_household_size: householdSizeValue ? Number(householdSizeValue) : profile.householdSize,
       queue_points_snapshot: profile.queueMembership?.currentPoints ?? 0,
       queue_joined_at_snapshot: profile.queueMembership?.joinedQueueAt ?? null,
       cover_letter: coverLetter,
+      move_in_date: moveInDate,
+      monthly_income: monthlyIncomeValue ? Number(monthlyIncomeValue) : profile.monthlyIncome,
+      employment_type: employmentType ?? profile.employmentStatus ?? null,
+      household_size: householdSizeValue ? Number(householdSizeValue) : profile.householdSize,
+      pets,
+      smoking,
       status: 'submitted',
       applicant_snapshot: profile,
     })

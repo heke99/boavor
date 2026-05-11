@@ -22,7 +22,16 @@ export async function submitListingInquiry(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim()
   const phone = String(formData.get('phone') ?? '').trim() || null
   const companyName = String(formData.get('companyName') ?? '').trim() || null
-  const message = String(formData.get('message') ?? '').trim() || null
+  const message = String(formData.get('message') ?? '').trim()
+  const budget = String(formData.get('budget') ?? '').trim()
+  const desiredTimeline = String(formData.get('desiredTimeline') ?? '').trim()
+  const enrichedMessage = [
+    message,
+    budget ? `Budget: ${budget}` : '',
+    desiredTimeline ? `Önskad tidsplan: ${desiredTimeline}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n') || null
   const inquiryType = String(formData.get('inquiryType') ?? 'interest') as InquiryType
   const preferredContactMethod = String(formData.get('preferredContactMethod') ?? 'email')
 
@@ -51,7 +60,7 @@ export async function submitListingInquiry(formData: FormData) {
     requester_company_name: companyName,
     inquiry_type: inquiryType,
     preferred_contact_method: preferredContactMethod,
-    message,
+    message: enrichedMessage,
     status: 'new',
   })
 

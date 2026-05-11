@@ -19,7 +19,7 @@ export default async function DashboardSettingsPage() {
     <DashboardShell
       activePath="/dashboard/settings"
       title="Inställningar"
-      description="Hantera konto, notiser, bostadsintresse och lösenord. Mer avancerade integritetsfunktioner kan byggas vidare i admin/säkerhetsfasen."
+      description="Hantera konto, notiser, bostadsintresse, lösenord och grundläggande integritetsinställningar."
     >
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="p-6">
@@ -73,10 +73,10 @@ export default async function DashboardSettingsPage() {
           <h2 className="text-2xl font-semibold text-[#111827]">Integritet och data</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-[#6b7280]">
             <p>Personnummer och dokument ska endast visas där det behövs för bostadsflödet.</p>
-            <p>Senare bör vi bygga export av data, radering av konto, aktivitetshistorik och mer detaljerad samtyckeshantering.</p>
+            <p>Kontakta supporten om du vill begära registerutdrag, rättelse eller radering av konto.</p>
           </div>
           <div className="mt-5 rounded-2xl bg-[#fffbeb] p-4 text-sm text-[#92400e]">
-            Konto-radering och full GDPR-export bör byggas som egen säker batch, inte som en snabb knapp utan kontroll.
+            Av säkerhetsskäl hanteras kontoavslut och registerutdrag via verifierad supportbegäran.
           </div>
         </Card>
       </div>

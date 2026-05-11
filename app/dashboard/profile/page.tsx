@@ -4,6 +4,8 @@ import { ProfileForm } from '@/components/dashboard/ProfileForm'
 import { Card } from '@/components/ui/Card'
 import { getDashboardProfile } from '@/lib/data/profile'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardProfilePage() {
   const result = await getDashboardProfile()
 
@@ -15,16 +17,16 @@ export default async function DashboardProfilePage() {
     <DashboardShell
       activePath="/dashboard/profile"
       title="Min profil"
-      description="Nu kopplad till riktig Supabase-data, medsökande, dokumentstruktur och Bovaro Kö+."
+      description="Hantera dina kontaktuppgifter, bostadsprofil, medsökande och dokument som används i ansökningsflödet."
     >
       <ProfileForm profile={result.profile} />
       <Card className="p-6">
-        <h2 className="text-xl font-semibold">Vad som nu är riktigt byggt</h2>
-        <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-          <li>• Profilen läses från och sparas till Supabase</li>
-          <li>• Medsökande kan sparas och tas bort</li>
-          <li>• Profildokument kan sparas som metadata och länkar</li>
-          <li>• Köpoäng och köstatus är redo att användas i framtida ansökningsflöden</li>
+        <h2 className="text-xl font-semibold text-[#111827]">Profilstatus</h2>
+        <ul className="mt-4 space-y-3 text-sm leading-6 text-[#5b6475]">
+          <li>• En komplett profil gör det snabbare att skicka bostadsansökningar.</li>
+          <li>• Medsökande och dokument kan väljas när du skickar en ansökan.</li>
+          <li>• Hyresvärden ser dina ansökningsuppgifter i ett strukturerat flöde.</li>
+          <li>• Uppdaterade kontaktuppgifter minskar risken att missa återkoppling.</li>
         </ul>
       </Card>
     </DashboardShell>
