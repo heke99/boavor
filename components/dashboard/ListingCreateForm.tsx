@@ -186,8 +186,8 @@ export function ListingCreateForm({ action }: Props) {
         ) : null}
 
         <Input name="availableFrom" placeholder="Tillgänglig från (YYYY-MM-DD)" />
-        <Input name="imageFile" type="file" accept="image/*" />
-        <Input name="imageUrl" placeholder="Alternativ bild-URL" />
+        <Input name="imageFiles" type="file" accept="image/*" multiple />
+        <Input name="imageUrl" placeholder="Alternativ bild-URL om du inte laddar upp bild" />
         <Input name="features" placeholder="Egenskaper, separera med kommatecken" className="md:col-span-2 xl:col-span-3" />
 
         <textarea

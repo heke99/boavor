@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import {
   BadgeCheck,
@@ -19,58 +18,12 @@ import { ListingGrid } from '@/components/listings/ListingGrid'
 import { Card } from '@/components/ui/Card'
 import { getListingPrimaryMeta, isRentalApplicationListing, listingTypeLabels } from '@/lib/listing-options'
 import { submitListingInquiry } from './actions'
-import { getSiteUrl } from '@/lib/url'
 
 export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ slug: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params
-  const listing = await getListingBySlug(slug)
-
-  if (!listing) {
-    return {
-      title: 'Objektet kunde inte hittas',
-      robots: { index: false, follow: false },
-    }
-  }
-
-  const siteUrl = getSiteUrl()
-  const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
-  const title = `${listing.title} i ${listing.city}`
-  const description = [
-    `${primaryMeta} ${listing.listingType === 'rent' ? 'för uthyrning' : 'till salu'} i ${listing.city}.`,
-    listing.areaSqm ? `${listing.areaSqm} m².` : '',
-    listing.description,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .slice(0, 180)
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `/listing/${listing.slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      url: `${siteUrl}/listing/${listing.slug}`,
-      type: 'article',
-      images: listing.imageUrl ? [{ url: listing.imageUrl, alt: listing.title }] : undefined,
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: listing.imageUrl ? [listing.imageUrl] : undefined,
-    },
-  }
 }
 
 function formatDate(value: string | null | undefined) {
@@ -109,10 +62,42 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
   const usesApplication = isRentalApplicationListing(listing.listingSegment, listing.listingType)
   const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
   const inquirySent = sp.inquiry === 'sent'
+  const inquiryError =
+    sp.inquiry === 'invalid'
+      ? 'Fyll i namn och en giltig e-postadress.'
+      : sp.inquiry === 'rate_limited'
+        ? 'Du har skickat flera intresseanmälningar nyligen. Vänta en stund och försök igen.'
+        : sp.inquiry === 'failed'
+          ? 'Intresseanmälan kunde inte skickas just nu.'
+          : null
   const gallery = listing.images.length ? listing.images : [{ id: listing.id, imageUrl: listing.imageUrl, altText: listing.title, isCover: true, position: 0 }]
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: listing.title,
+    description: listing.description,
+    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.bovaro.se'}/listing/${listing.slug}`,
+    image: gallery.map((image) => image.imageUrl),
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: listing.street ?? undefined,
+      postalCode: listing.zipCode ?? undefined,
+      addressLocality: listing.city,
+      addressCountry: listing.country ?? 'SE',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: listing.price,
+      priceCurrency: 'SEK',
+      availability: listing.status === 'published' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    floorSize: listing.areaSqm ? { '@type': 'QuantitativeValue', value: listing.areaSqm, unitCode: 'MTK' } : undefined,
+    numberOfRooms: listing.rooms || undefined,
+  }
 
   return (
     <section className="container-shell py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
           <div className="relative h-[420px] overflow-hidden rounded-[34px] bg-[#f3f4f6]">
@@ -254,6 +239,11 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
               {inquirySent ? (
                 <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
                   Din intresseanmälan är skickad.
+                </div>
+              ) : null}
+              {inquiryError ? (
+                <div className="mt-4 rounded-2xl bg-[#fef2f2] p-4 text-sm font-semibold text-[#b91c1c]">
+                  {inquiryError}
                 </div>
               ) : null}
               <form action={submitListingInquiry} className="mt-5 space-y-4">

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing } from '@/lib/auth/permissions'
 import { requireSignedInUser } from '@/lib/data/rental-applications'
-import { LISTING_IMAGES_BUCKET, sanitizeStorageFileName } from '@/lib/storage'
+import { LISTING_IMAGES_BUCKET, sanitizeStorageFileName, validateListingImage } from '@/lib/storage'
 import {
   AppRole,
   CommercialType,
@@ -52,27 +52,39 @@ function resolvePropertyType(segment: ListingSegment, formData: FormData) {
   return getDefaultPropertyType(segment)
 }
 
-async function uploadListingImage(
+async function uploadListingImages(
   supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
   userId: string,
   formData: FormData,
 ) {
-  const uploadedFile = formData.get('imageFile')
-  if (!(uploadedFile instanceof File) || uploadedFile.size === 0) return null
+  const uploadedFiles = [...formData.getAll('imageFiles'), formData.get('imageFile')].filter(
+    (file): file is File => file instanceof File && file.size > 0,
+  )
 
-  const safeFileName = sanitizeStorageFileName(uploadedFile.name)
-  const storagePath = `${userId}/${randomUUID()}-${safeFileName}`
-  const { error } = await supabase.storage.from(LISTING_IMAGES_BUCKET).upload(storagePath, uploadedFile, {
-    contentType: uploadedFile.type || 'application/octet-stream',
-    upsert: false,
-  })
+  const urls: string[] = []
+  for (const uploadedFile of uploadedFiles.slice(0, 8)) {
+    const validationError = validateListingImage(uploadedFile)
+    if (validationError) {
+      console.error('Invalid listing image upload', validationError)
+      continue
+    }
 
-  if (error) {
-    console.error('Failed to upload listing image', error)
-    return null
+    const safeFileName = sanitizeStorageFileName(uploadedFile.name)
+    const storagePath = `${userId}/${randomUUID()}-${safeFileName}`
+    const { error } = await supabase.storage.from(LISTING_IMAGES_BUCKET).upload(storagePath, uploadedFile, {
+      contentType: uploadedFile.type || 'application/octet-stream',
+      upsert: false,
+    })
+
+    if (error) {
+      console.error('Failed to upload listing image', error)
+      continue
+    }
+
+    urls.push(supabase.storage.from(LISTING_IMAGES_BUCKET).getPublicUrl(storagePath).data.publicUrl)
   }
 
-  return supabase.storage.from(LISTING_IMAGES_BUCKET).getPublicUrl(storagePath).data.publicUrl
+  return urls
 }
 
 export async function createListingAction(formData: FormData) {
@@ -92,7 +104,7 @@ export async function createListingAction(formData: FormData) {
   const storageType = listingSegment === 'storage' ? (String(formData.get('storageType') ?? 'storage_unit') as StorageType) : null
   const landType = listingSegment === 'land' ? (String(formData.get('landType') ?? 'land_plot') as LandType) : null
   const investmentType = listingSegment === 'investment' ? (String(formData.get('investmentType') ?? 'rental_property') as InvestmentType) : null
-  const status = String(formData.get('status') ?? 'draft') as ListingStatus
+  let status = String(formData.get('status') ?? 'draft') as ListingStatus
   const description = getNullableString(formData, 'description')
   const areaName = getNullableString(formData, 'areaName')
   const street = getNullableString(formData, 'street')
@@ -102,7 +114,8 @@ export async function createListingAction(formData: FormData) {
   const rooms = listingSegment === 'residential' ? getNullableNumber(formData, 'rooms') : null
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const availableFrom = getNullableString(formData, 'availableFrom')
-  const imageUrl = (await uploadListingImage(supabase, user.id, formData)) ?? getNullableString(formData, 'imageUrl')
+  const uploadedImageUrls = await uploadListingImages(supabase, user.id, formData)
+  const imageUrl = uploadedImageUrls[0] ?? getNullableString(formData, 'imageUrl')
   const minLeaseMonths = listingSegment !== 'residential' ? getNullableNumber(formData, 'minLeaseMonths') : null
   const monthlyServiceFee = listingSegment !== 'residential' ? getNullableNumber(formData, 'monthlyServiceFee') : null
   const isVatApplicable = String(formData.get('isVatApplicable') ?? 'false') === 'true'
@@ -114,6 +127,17 @@ export async function createListingAction(formData: FormData) {
   const features = featuresRaw ? featuresRaw.split(',').map((item) => item.trim()).filter(Boolean) : []
 
   const companyId = profile.companyIds[0] ?? null
+  if (companyId && status === 'published') {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('verification_status')
+      .eq('id', companyId)
+      .maybeSingle<{ verification_status: string | null }>()
+
+    if (company?.verification_status !== 'verified') {
+      status = 'draft'
+    }
+  }
 
   const slugBase = slugify(title)
   const slug = `${slugBase}-${Date.now().toString().slice(-6)}`
@@ -164,14 +188,17 @@ export async function createListingAction(formData: FormData) {
     return
   }
 
-  if (imageUrl) {
-    await supabase.from('listing_images').insert({
-      listing_id: listing.id,
-      image_url: imageUrl,
-      position: 0,
-      is_cover: true,
-      alt_text: title,
-    })
+  const imageUrls = imageUrl ? [imageUrl, ...uploadedImageUrls.slice(1)] : uploadedImageUrls
+  if (imageUrls.length > 0) {
+    await supabase.from('listing_images').insert(
+      imageUrls.map((url, index) => ({
+        listing_id: listing.id,
+        image_url: url,
+        position: index,
+        is_cover: index === 0,
+        alt_text: title,
+      })),
+    )
   }
 
   if (features.length > 0) {
@@ -343,12 +370,25 @@ export async function updateListingDetailsAction(formData: FormData) {
   const storageType = listingSegment === 'storage' ? (String(formData.get('storageType') ?? 'storage_unit') as StorageType) : null
   const landType = listingSegment === 'land' ? (String(formData.get('landType') ?? 'land_plot') as LandType) : null
   const investmentType = listingSegment === 'investment' ? (String(formData.get('investmentType') ?? 'rental_property') as InvestmentType) : null
-  const status = String(formData.get('status') ?? 'draft') as ListingStatus
+  let status = String(formData.get('status') ?? 'draft') as ListingStatus
+  if (existing.company_id && status === 'published') {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('verification_status')
+      .eq('id', existing.company_id)
+      .maybeSingle<{ verification_status: string | null }>()
+
+    if (company?.verification_status !== 'verified') {
+      status = 'draft'
+    }
+  }
+
   const price = Number(formData.get('price') ?? 0)
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const featuresRaw = String(formData.get('features') ?? '').trim()
   const features = Array.from(new Set(featuresRaw ? featuresRaw.split(',').map((item) => item.trim()).filter(Boolean) : []))
-  const imageUrl = (await uploadListingImage(supabase, user.id, formData)) ?? getNullableString(formData, 'imageUrl')
+  const uploadedImageUrls = await uploadListingImages(supabase, user.id, formData)
+  const imageUrl = uploadedImageUrls[0] ?? getNullableString(formData, 'imageUrl')
   const pricePerSqm = areaSqm && price ? Math.round(price / areaSqm) : null
 
   const updatePayload = {
@@ -414,6 +454,18 @@ export async function updateListingDetailsAction(formData: FormData) {
     } else {
       await supabase.from('listing_images').insert({ listing_id: listingId, image_url: imageUrl, alt_text: title, is_cover: true, position: 0 })
     }
+  }
+
+  if (uploadedImageUrls.length > 1) {
+    await supabase.from('listing_images').insert(
+      uploadedImageUrls.slice(1).map((url, index) => ({
+        listing_id: listingId,
+        image_url: url,
+        alt_text: title,
+        is_cover: false,
+        position: index + 1,
+      })),
+    )
   }
 
   if (listingSegment === 'residential' && listingType === 'rent') {

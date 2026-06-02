@@ -11,13 +11,21 @@ export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ slug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default async function ApplyPage({ params }: Props) {
-  const { slug } = await params
+export default async function ApplyPage({ params, searchParams }: Props) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams])
   const { listing, profile } = await getApplyPageData(slug)
 
   if (listing.listingType !== 'rent') redirect(`/listing/${slug}`)
+
+  const errorCode = typeof sp.error === 'string' ? sp.error : null
+  const errorMessage = errorCode === 'rate_limited'
+    ? 'Du har skickat flera ansökningar nyligen. Vänta en stund och försök igen.'
+    : errorCode === 'failed'
+      ? 'Ansökan kunde inte skickas just nu.'
+      : null
 
   return (
     <DashboardShell
@@ -25,6 +33,9 @@ export default async function ApplyPage({ params }: Props) {
       title="Ansök om bostad"
       description="Skicka en komplett ansökan med profil, dokument, medsökande och personligt meddelande."
     >
+      {errorMessage ? (
+        <div className="rounded-2xl bg-[#fef2f2] p-4 text-sm font-semibold text-[#b91c1c]">{errorMessage}</div>
+      ) : null}
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="p-6">
           <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Objekt</div>

@@ -26,6 +26,7 @@ Kör SQL-filerna i Supabase SQL Editor i denna ordning för en komplett miljö:
 11. `supabase/phase_public_listing_flows.sql`
 12. `supabase/phase_permissions_security_hardening.sql`
 13. `supabase/production_go_live.sql`
+14. `supabase/production_polish.sql`
 
 `supabase/phase_demo_seed_data.sql` är endast för demo/staging och ska inte köras i produktion.
 
@@ -35,7 +36,7 @@ Minimikrav före go-live:
 
 - sätt `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL` och `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - konfigurera Supabase Auth redirect URLs för `/auth/callback`
-- kör SQL-ordningen ovan och verifiera Storage-buckets `listing-images` och `profile-documents`
+- kör SQL-ordningen ovan och verifiera Storage-buckets `listing-images` och `profile-documents` samt readiness/rate-limit-funktioner
 - aktivera CI: `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=moderate`
 - konfigurera e-post, betalning, monitoring och rate limit enligt `.env.example`
 - verifiera `/api/health`, `/robots.txt` och `/sitemap.xml` efter deploy
@@ -56,4 +57,4 @@ Detta paket täcker Bovaro upp till produktionsförberedande fas:
 - Supabase-schema + RLS
 - auth callback, session middleware och lösenordsåterställning
 - Supabase Storage för annonsbilder och profildokument
-- SEO metadata, sitemap, robots, security headers och health endpoint
+- SEO metadata, sitemap, robots, JSON-LD, security headers, health/readiness endpoints och admin systemvy

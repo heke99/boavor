@@ -210,7 +210,7 @@ export function ListingEditForm({ listing, action }: Props) {
         ) : null}
 
         <Input name="availableFrom" defaultValue={listing.availableFrom ?? ''} placeholder="Tillgänglig från (YYYY-MM-DD)" />
-        <Input name="imageFile" type="file" accept="image/*" />
+        <Input name="imageFiles" type="file" accept="image/*" multiple />
         <Input name="imageUrl" defaultValue={listing.coverImageUrl ?? ''} placeholder="Alternativ omslagsbild-URL" />
         <Input name="features" defaultValue={listing.features.join(', ')} placeholder="Egenskaper, separera med kommatecken" className="md:col-span-2 xl:col-span-3" />
 
