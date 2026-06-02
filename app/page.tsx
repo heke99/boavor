@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Building2, CheckCircle2, Home, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react'
 import { Suspense } from 'react'
 import { HeroSearch } from '@/components/home/HeroSearch'
 import { StatsStrip } from '@/components/home/StatsStrip'
@@ -14,64 +14,69 @@ export default async function HomePage() {
 
   return (
     <>
-      <section
-        className="overflow-hidden"
-        style={{
-          background:
-            'linear-gradient(135deg, #0f172a 0%, #18244a 45%, #243b8f 100%)',
-        }}
-      >
-        <div className="container-shell relative py-20 md:py-24">
+      <section className="relative overflow-hidden bg-[#070a1a]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(91,61,245,0.42),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(14,165,164,0.30),transparent_24%),linear-gradient(135deg,#080b1c_0%,#111a3a_46%,#243b8f_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f7f7fb] to-transparent" />
+        <div className="container-shell relative py-20 md:py-28">
           <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-xl">
                 <Sparkles size={15} />
-                Bovaro för bostäder och kommersiella objekt
+                Ny smartare marknadsplats för bostäder och lokaler
               </div>
 
-              <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.04] tracking-[-0.03em] text-white md:text-6xl">
-                Hitta bostäder, lokaler, kontor och fastighetsobjekt i en tydligare marknadsplats.
+              <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] text-white md:text-7xl">
+                Hitta, jämför och agera snabbare på rätt objekt.
               </h1>
 
-              <p className="mt-6 max-w-2xl text-base leading-8 text-white/88 md:text-lg">
-                Bovaro samlar bostäder, lokaler, kontor, parkeringar, förråd, mark och investeringsfastigheter i ett modernt flöde där både privatpersoner och företag får bättre kontroll.
+              <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-xl">
+                Bovaro samlar hyresbostäder, bostäder till salu, lokaler, kontor och fastighetsobjekt i ett premiumflöde för både sökande och annonsörer.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button
                   href="/listings"
-                  className="border border-white/22 bg-white/10 text-white hover:bg-white/16"
+                  className="border border-white/22 bg-white !text-[#111827] shadow-[0_20px_60px_rgba(255,255,255,0.18)] hover:bg-white/90"
                 >
-                  Se alla objekt
+                  Utforska objekt
                   <ArrowRight size={16} className="ml-2" />
                 </Button>
 
                 <Button
                   href="/register"
-                  className="border border-white/22 bg-white/10 text-white hover:bg-white/16"
+                  className="border border-white/22 bg-white/10 !text-white hover:bg-white/16"
                 >
                   <ShieldCheck size={16} className="mr-2" />
-                  Skapa konto
+                  Skapa trygg profil
                 </Button>
               </div>
 
-              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/12 bg-white/8 px-4 py-4 backdrop-blur-sm">
-                  <div className="text-2xl font-semibold text-white">Bostäder</div>
+              <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold text-white/76">
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Dynamiska filter</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Verifierade flöden</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Dashboard för annonsörer</span>
+              </div>
+
+              <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
+                <div className="group rounded-3xl border border-white/12 bg-white/[0.08] px-4 py-4 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/[0.12]">
+                  <Home size={20} className="mb-3 text-[#bfdbfe]" />
+                  <div className="text-xl font-semibold text-white">Bostäder</div>
                   <p className="mt-1 text-sm leading-6 text-white/80">
-                    Hyr eller köp bostad med tydligt objektflöde.
+                    Hyra och köpa med tydlig data.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-white/12 bg-white/8 px-4 py-4 backdrop-blur-sm">
-                  <div className="text-2xl font-semibold text-white">Kommersiellt</div>
+                <div className="group rounded-3xl border border-white/12 bg-white/[0.08] px-4 py-4 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/[0.12]">
+                  <Building2 size={20} className="mb-3 text-[#99f6e4]" />
+                  <div className="text-xl font-semibold text-white">Kommersiellt</div>
                   <p className="mt-1 text-sm leading-6 text-white/80">
-                    Lokaler, kontor, parkering, förråd och mark.
+                    Lokaler, kontor, mark och mer.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-white/12 bg-white/8 px-4 py-4 backdrop-blur-sm">
-                  <div className="text-2xl font-semibold text-white">För annonsörer</div>
+                <div className="group rounded-3xl border border-white/12 bg-white/[0.08] px-4 py-4 backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white/[0.12]">
+                  <TrendingUp size={20} className="mb-3 text-[#fed7aa]" />
+                  <div className="text-xl font-semibold text-white">Leads</div>
                   <p className="mt-1 text-sm leading-6 text-white/80">
-                    Hantera ansökningar, leads och intresseanmälningar.
+                    Ansökningar och intressen samlat.
                   </p>
                 </div>
               </div>
@@ -97,8 +102,8 @@ export default async function HomePage() {
       <section className="container-shell py-16">
         <SectionHeading
           eyebrow="Utvalda objekt"
-          title="Bostäder och kommersiella objekt i samma flöde"
-          description="Se aktuella bostäder, lokaler, parkeringar, förråd, mark och fastighetsobjekt som är publicerade på Bovaro."
+          title="Ett urval av bostäder, lokaler och investeringsobjekt"
+          description="Utforska publicerade objekt med tydligare fakta, smartare filter och snabb väg till ansökan eller intresseanmälan."
         />
         <div className="mt-8">
           <ListingGrid listings={featuredListings} />
@@ -109,9 +114,11 @@ export default async function HomePage() {
       <AreaGrid />
 
       <section className="container-shell py-16">
-        <div className="rounded-[36px] bg-[linear-gradient(135deg,#101228,#1e2e72)] p-8 text-white md:p-12">
+        <div className="relative overflow-hidden rounded-[42px] bg-[linear-gradient(135deg,#101228,#1e2e72)] p-8 text-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] md:p-12">
+          <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[#5eead4]/18 blur-3xl" />
           <div className="max-w-3xl">
-            <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+              <BadgeCheck size={14} />
               För annonsörer
             </div>
             <h2 className="mt-4 text-3xl font-semibold md:text-4xl">

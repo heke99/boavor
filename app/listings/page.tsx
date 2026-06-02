@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { ListingFilters } from '@/components/listings/ListingFilters'
 import { getPublishedListings } from '@/lib/data/listings'
@@ -14,13 +13,6 @@ import type {
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-
-export const metadata: Metadata = {
-  title: 'Sök bostäder, lokaler och fastigheter',
-  description:
-    'Sök bostäder att hyra eller köpa samt lokaler, kontor, parkering, förråd, mark och investeringsfastigheter på Bovaro.',
-  alternates: { canonical: '/listings' },
-}
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -100,14 +92,21 @@ export default async function ListingsPage({ searchParams }: Props) {
 
   return (
     <section className="container-shell py-12">
-      <div className="max-w-3xl">
-        <h1 className="text-4xl font-semibold text-[#111827]">Sök objekt</h1>
-        <p className="mt-3 text-base leading-7 text-[#5b6475]">
-          Dynamiska filter för bostäder, lokaler, kontor, parkeringar, förråd, mark och investeringsfastigheter.
-        </p>
+      <div className="relative overflow-hidden rounded-[42px] bg-[linear-gradient(135deg,#101228,#243b8f)] p-8 text-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] md:p-12">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[#5eead4]/20 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-[#5b3df5]/28 blur-3xl" />
+        <div className="relative max-w-3xl">
+          <div className="inline-flex rounded-full border border-white/16 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/82">
+            Sök hela Bovaro
+          </div>
+          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.04em] md:text-6xl">Sök bostäder, lokaler och fastigheter</h1>
+          <p className="mt-5 text-base leading-8 text-white/78 md:text-lg">
+            Filtrera bland hyresbostäder, objekt till salu, kontor, lokaler, parkering, förråd, mark och investeringsfastigheter.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 rounded-[34px] border border-white/70 bg-white/88 p-4 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
         <ListingFilters />
       </div>
 

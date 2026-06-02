@@ -8,14 +8,14 @@ export function SectionHeading({
   description?: string
 }) {
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       {eyebrow ? (
-        <div className="mb-3 inline-flex rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[#8a5d00]">
+        <div className="mb-4 inline-flex rounded-full border border-[#fed7aa] bg-[#fff7ed] px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#9a5b00] shadow-sm">
           {eyebrow}
         </div>
       ) : null}
-      <h2 className="text-3xl font-semibold tracking-tight text-[var(--foreground)] md:text-4xl">{title}</h2>
-      {description ? <p className="mt-4 text-base leading-7 text-[var(--muted)]">{description}</p> : null}
+      <h2 className="text-3xl font-semibold tracking-[-0.035em] text-[var(--foreground)] md:text-5xl">{title}</h2>
+      {description ? <p className="mt-5 text-base leading-8 text-[var(--muted)] md:text-lg">{description}</p> : null}
     </div>
   )
 }
