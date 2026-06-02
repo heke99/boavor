@@ -144,7 +144,7 @@ export async function getUserApplications() {
       .eq('user_id', user.id),
     supabase
       .from('rental_application_documents')
-      .select('application_id, file_name, file_url, document_type')
+      .select('id, application_id, file_name, file_url, document_type')
       .eq('user_id', user.id),
   ])
 
@@ -197,7 +197,7 @@ export async function getUserApplications() {
       listing: { slug: row.listing_slug, title: row.listing_title, city: row.listing_city, listingType: row.listing_type, price: row.listing_price, imageUrl: row.listing_image_url },
       applicant: { fullName: row.applicant_full_name, email: row.applicant_email, phone: row.applicant_phone, monthlyIncome: row.applicant_monthly_income, householdSize: row.applicant_household_size },
       coApplicants: (coApplicantMap.get(row.id) ?? []).map((item) => ({ fullName: item.full_name, email: item.email, phone: item.phone, relationship: item.relationship })),
-      documents: (documentMap.get(row.id) ?? []).map((item) => ({ fileName: item.file_name, fileUrl: item.file_url, documentType: item.document_type })),
+      documents: (documentMap.get(row.id) ?? []).map((item) => ({ fileName: item.file_name, fileUrl: getApplicationDocumentUrl(item), documentType: item.document_type })),
     }),
     listing: {
       slug: row.listing_slug,
@@ -222,7 +222,7 @@ export async function getUserApplications() {
     })),
     documents: (documentMap.get(row.id) ?? []).map((item) => ({
       fileName: item.file_name,
-      fileUrl: item.file_url,
+      fileUrl: getApplicationDocumentUrl(item),
       documentType: item.document_type,
     })),
   }))
@@ -318,7 +318,7 @@ export async function getOwnerDashboardData() {
           .in('application_id', incomingIds),
         supabase
           .from('rental_application_documents')
-          .select('application_id, file_name, file_url, document_type')
+          .select('id, application_id, file_name, file_url, document_type')
           .in('application_id', incomingIds),
       ])
     : [{ data: [] }, { data: [] }]
@@ -368,7 +368,7 @@ export async function getOwnerDashboardData() {
     })),
     documents: (documentMap.get(row.id) ?? []).map((item) => ({
       fileName: item.file_name,
-      fileUrl: item.file_url,
+      fileUrl: getApplicationDocumentUrl(item),
       documentType: item.document_type,
     })),
   }))
@@ -550,7 +550,7 @@ function mapApplicationRows(
       })),
       documents: (documentMap.get(row.id) ?? []).map((document) => ({
         fileName: document.file_name,
-        fileUrl: document.file_url,
+        fileUrl: getApplicationDocumentUrl(document),
         documentType: document.document_type,
       })),
     }
@@ -617,7 +617,7 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
   const [{ data: coApplicants }, { data: documents }] = applicationIds.length
     ? await Promise.all([
         supabase.from('rental_application_co_applicants').select('application_id, full_name, email, phone, relationship').in('application_id', applicationIds),
-        supabase.from('rental_application_documents').select('application_id, file_name, file_url, document_type').in('application_id', applicationIds),
+        supabase.from('rental_application_documents').select('id, application_id, file_name, file_url, document_type').in('application_id', applicationIds),
       ])
     : [{ data: [] }, { data: [] }]
 

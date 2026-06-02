@@ -313,3 +313,23 @@ export async function updatePasswordAction(formData: FormData) {
   await supabase.auth.updateUser({ password })
   revalidatePath('/dashboard/settings')
 }
+
+export async function createPrivacyRequestAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const requestType = String(formData.get('requestType') ?? 'export')
+  const allowedTypes = ['export', 'rectification', 'erasure', 'restriction']
+  if (!allowedTypes.includes(requestType)) return
+
+  const { error } = await supabase.from('privacy_requests').insert({
+    user_id: user.id,
+    request_type: requestType,
+    message: String(formData.get('message') ?? '').trim() || null,
+  })
+
+  if (error) {
+    console.error('Failed to create privacy request', error)
+    return
+  }
+
+  revalidatePath('/dashboard/settings')
+}

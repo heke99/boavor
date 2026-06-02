@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { ListingFilters } from '@/components/listings/ListingFilters'
 import { getPublishedListings } from '@/lib/data/listings'
@@ -13,6 +14,13 @@ import type {
 } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Sök bostäder, lokaler och fastigheter',
+  description:
+    'Sök bostäder att hyra eller köpa samt lokaler, kontor, parkering, förråd, mark och investeringsfastigheter på Bovaro.',
+  alternates: { canonical: '/listings' },
+}
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>

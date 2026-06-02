@@ -188,9 +188,10 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
             <div className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-[var(--muted)]">{profile.documents.length} st</div>
           </div>
 
-          <form action={addProfileDocumentAction} className="grid gap-4 md:grid-cols-3">
+          <form action={addProfileDocumentAction} encType="multipart/form-data" className="grid gap-4 md:grid-cols-3">
             <Input name="fileName" placeholder="Filnamn" />
-            <Input name="fileUrl" placeholder="Fil-URL" />
+            <Input name="file" type="file" accept=".pdf,image/*,.doc,.docx" />
+            <Input name="fileUrl" placeholder="Alternativ fil-URL" />
             <Input name="documentType" placeholder="Dokumenttyp, t.ex. income-proof" />
             <div className="md:col-span-3 flex justify-end">
               <Button variant="secondary">Lägg till dokument</Button>

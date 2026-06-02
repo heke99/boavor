@@ -134,11 +134,12 @@ export function RegisterForm() {
     const organizationNumber = String(formData.get('organizationNumber') ?? '').trim()
     const companySlug = companyName ? `${createSlug(companyName)}-${Date.now().toString(36)}` : null
 
+    const next = encodeURIComponent('/dashboard')
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}`,
         data: {
           account_type: accountType,
           first_name: firstName,
@@ -174,7 +175,7 @@ export function RegisterForm() {
     }
 
     setStatus('success')
-    setMessage('Kontot är skapat. Kontrollera din e-post om verifiering krävs, annars kan du logga in direkt.')
+    setMessage('Kontot är skapat. Kontrollera din e-post och klicka på verifieringslänken för att aktivera sessionen.')
     form.reset()
   }
 

@@ -35,7 +35,7 @@ export function ListingCreateForm({ action }: Props) {
   }, [commercialType, segment])
 
   return (
-    <form action={action} className="mt-6 space-y-6">
+    <form action={action} encType="multipart/form-data" className="mt-6 space-y-6">
       <div>
         <div className="text-sm font-semibold text-[#111827]">Vad vill du publicera?</div>
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -186,7 +186,8 @@ export function ListingCreateForm({ action }: Props) {
         ) : null}
 
         <Input name="availableFrom" placeholder="Tillgänglig från (YYYY-MM-DD)" />
-        <Input name="imageUrl" placeholder="Bild-URL" />
+        <Input name="imageFile" type="file" accept="image/*" />
+        <Input name="imageUrl" placeholder="Alternativ bild-URL" />
         <Input name="features" placeholder="Egenskaper, separera med kommatecken" className="md:col-span-2 xl:col-span-3" />
 
         <textarea

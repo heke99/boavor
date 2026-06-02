@@ -2,11 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-
-function safeNextPath(value: string | undefined) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard'
-  return value
-}
+import { getSafeNextPath } from '@/lib/url'
 
 export default async function LoginPage({
   searchParams,
@@ -14,7 +10,7 @@ export default async function LoginPage({
   searchParams?: Promise<{ next?: string }>
 }) {
   const params = await searchParams
-  const nextPath = safeNextPath(params?.next)
+  const nextPath = getSafeNextPath(params?.next)
   const supabase = await createSupabaseServerClient()
 
   if (supabase) {

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { getDashboardProfile } from '@/lib/data/profile'
-import { updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
+import { createPrivacyRequestAction, updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,11 +73,23 @@ export default async function DashboardSettingsPage() {
           <h2 className="text-2xl font-semibold text-[#111827]">Integritet och data</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-[#6b7280]">
             <p>Personnummer och dokument ska endast visas där det behövs för bostadsflödet.</p>
-            <p>Kontakta supporten om du vill begära registerutdrag, rättelse eller radering av konto.</p>
+            <p>Skicka en verifierad begäran om registerutdrag, rättelse, begränsning eller radering.</p>
           </div>
-          <div className="mt-5 rounded-2xl bg-[#fffbeb] p-4 text-sm text-[#92400e]">
-            Av säkerhetsskäl hanteras kontoavslut och registerutdrag via verifierad supportbegäran.
-          </div>
+          <form action={createPrivacyRequestAction} className="mt-5 space-y-4">
+            <Select name="requestType" defaultValue="export">
+              <option value="export">Registerutdrag</option>
+              <option value="rectification">Rättelse av uppgifter</option>
+              <option value="restriction">Begränsning av behandling</option>
+              <option value="erasure">Radering av konto/data</option>
+            </Select>
+            <textarea
+              name="message"
+              rows={4}
+              placeholder="Beskriv kort vad du vill att supporten hanterar."
+              className="w-full rounded-2xl border border-[#d7dbe7] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#5b3df5] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+            />
+            <Button variant="ghost" className="border border-[#d7dbe7] !text-[#111827]">Skicka integritetsbegäran</Button>
+          </form>
         </Card>
       </div>
     </DashboardShell>

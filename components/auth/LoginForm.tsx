@@ -7,13 +7,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { getSafeNextPath } from '@/lib/url'
 
 type LoginStatus = 'idle' | 'loading' | 'error'
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/dashboard'
+  const next = getSafeNextPath(searchParams.get('next'))
   const [status, setStatus] = useState<LoginStatus>('idle')
   const [message, setMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -75,7 +76,12 @@ export function LoginForm() {
           />
         </div>
         <div>
-          <label className="mb-2 block text-sm font-semibold text-[#111827]">Lösenord</label>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-sm font-semibold text-[#111827]">Lösenord</label>
+            <Link href="/reset-password" className="text-xs font-semibold text-[#5b3df5] hover:underline">
+              Glömt lösenord?
+            </Link>
+          </div>
           <div className="relative">
             <Input
               name="password"

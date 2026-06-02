@@ -1,7 +1,15 @@
+import type { Metadata } from 'next'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { getPublishedListings } from '@/lib/data/listings'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Hyra bostad, lokal, kontor och parkering',
+  description:
+    'Hitta hyresbostäder, lägenheter, hus, lokaler, kontor, parkeringar, förråd och mark att hyra på Bovaro.',
+  alternates: { canonical: '/rent' },
+}
 
 export default async function RentPage() {
   const listings = await getPublishedListings({ mode: 'rent' })
