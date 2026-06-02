@@ -420,3 +420,99 @@ export async function getAdminOverview(): Promise<AdminOverviewData> {
     pendingCompanies: companies.filter((company) => company.verificationStatus === 'pending').slice(0, 6),
   }
 }
+
+export async function getAdminAuditLogs(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('admin_audit_logs')
+    .select('id, admin_user_id, action, target_type, target_id, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch admin audit logs', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    admin_user_id: string | null
+    action: string
+    target_type: string
+    target_id: string | null
+    metadata: Record<string, unknown>
+    created_at: string
+  }>
+}
+
+export async function getAdminPrivacyRequests(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('privacy_requests')
+    .select('id, user_id, request_type, status, message, handled_by, handled_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch privacy requests', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    user_id: string
+    request_type: string
+    status: string
+    message: string | null
+    handled_by: string | null
+    handled_at: string | null
+    created_at: string
+  }>
+}
+
+export async function getAdminRateLimitEvents(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('rate_limit_events')
+    .select('id, scope, subject_hash, ip_hash, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch rate limit events', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    scope: string
+    subject_hash: string
+    ip_hash: string | null
+    created_at: string
+  }>
+}
+
+export async function getAdminDocumentAccessLogs(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('document_access_logs')
+    .select('id, document_id, application_document_id, actor_user_id, owner_user_id, access_type, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch document access logs', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    document_id: string | null
+    application_document_id: string | null
+    actor_user_id: string | null
+    owner_user_id: string | null
+    access_type: string
+    metadata: Record<string, unknown>
+    created_at: string
+  }>
+}

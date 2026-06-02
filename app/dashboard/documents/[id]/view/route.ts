@@ -37,5 +37,13 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Could not create signed document URL' }, { status: 500 })
   }
 
+  await supabase.from('document_access_logs').insert({
+    document_id: document.id,
+    actor_user_id: user.id,
+    owner_user_id: document.user_id,
+    access_type: 'profile_document',
+    metadata: { route: 'dashboard_document_view' },
+  })
+
   return NextResponse.redirect(data.signedUrl)
 }

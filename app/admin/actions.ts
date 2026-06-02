@@ -20,9 +20,10 @@ async function logAdminAction(action: string, targetType: string, targetId: stri
 }
 
 export async function updateCompanyVerificationAction(formData: FormData) {
-  const { supabase } = await requireAdminUser()
+  const { supabase, user } = await requireAdminUser()
   const companyId = String(formData.get('companyId') ?? '')
   const verificationStatus = String(formData.get('verificationStatus') ?? 'pending')
+  const verificationNote = String(formData.get('verificationNote') ?? '').trim() || null
   if (!companyId || !['pending', 'verified', 'rejected'].includes(verificationStatus)) return
 
   const { data: existing } = await supabase
@@ -33,10 +34,19 @@ export async function updateCompanyVerificationAction(formData: FormData) {
 
   if (!existing) return
 
-  await supabase.from('companies').update({ verification_status: verificationStatus }).eq('id', companyId)
+  await supabase
+    .from('companies')
+    .update({
+      verification_status: verificationStatus,
+      verification_note: verificationNote,
+      verified_at: verificationStatus === 'verified' ? new Date().toISOString() : null,
+      verified_by: verificationStatus === 'verified' ? user.id : null,
+    })
+    .eq('id', companyId)
   await logAdminAction('company_verification_updated', 'company', companyId, {
     previousStatus: existing.verification_status,
     verificationStatus,
+    verificationNote,
   })
   revalidatePath('/admin')
   revalidatePath('/admin/companies')

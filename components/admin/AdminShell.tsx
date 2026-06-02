@@ -4,6 +4,7 @@ import {
   ClipboardList,
   FileText,
   Inbox,
+  Activity,
   LayoutDashboard,
   ShieldCheck,
   Users,
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
+  { href: '/admin/system', label: 'System', icon: Activity },
 ]
 
 export function AdminShell({

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getApplyPageData, buildApplicantFullName } from '@/lib/data/rental-applications'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -20,11 +21,37 @@ export async function submitRentalApplication(formData: FormData) {
   const { supabase, user } = await (await import('@/lib/data/rental-applications')).requireSignedInUser()
   const { listing, profile } = await getApplyPageData(slug)
 
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'rental_application',
+    subject: `${user.id}:${listing.slug}`,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  })
+
+  if (!allowed) {
+    redirect(`/listing/${slug}/apply?error=rate_limited`)
+  }
+
   const { data: owner } = await supabase
     .from('listings')
     .select('id, created_by, company_id')
     .eq('slug', listing.slug)
     .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
+
+  if (owner?.id) {
+    const { data: existingApplication } = await supabase
+      .from('rental_applications')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', owner.id)
+      .neq('status', 'withdrawn')
+      .limit(1)
+      .maybeSingle<{ id: string }>()
+
+    if (existingApplication) {
+      redirect('/dashboard/applications?duplicate=1')
+    }
+  }
 
   const { data: created, error } = await supabase
     .from('rental_applications')
@@ -61,7 +88,7 @@ export async function submitRentalApplication(formData: FormData) {
 
   if (error || !created) {
     console.error('Failed to create rental application', error)
-    return
+    redirect(`/listing/${slug}/apply?error=failed`)
   }
 
   if (selectedCoApplicants.length > 0) {

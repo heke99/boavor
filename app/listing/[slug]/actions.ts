@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getListingBySlug } from '@/lib/data/listings'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { InquiryType } from '@/lib/types'
 
 export async function submitListingInquiry(formData: FormData) {
@@ -35,7 +36,20 @@ export async function submitListingInquiry(formData: FormData) {
   const inquiryType = String(formData.get('inquiryType') ?? 'interest') as InquiryType
   const preferredContactMethod = String(formData.get('preferredContactMethod') ?? 'email')
 
-  if (!fullName || !email) return
+  if (!fullName || !email || !email.includes('@')) {
+    redirect(`/listing/${slug}?inquiry=invalid`)
+  }
+
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'listing_inquiry',
+    subject: `${email}:${listing.slug}`,
+    limit: 3,
+    windowSeconds: 60 * 60,
+  })
+
+  if (!allowed) {
+    redirect(`/listing/${slug}?inquiry=rate_limited`)
+  }
 
   const { data: owner } = await supabase
     .from('listings')
@@ -43,7 +57,7 @@ export async function submitListingInquiry(formData: FormData) {
     .eq('slug', listing.slug)
     .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
 
-  await supabase.from('listing_inquiries').insert({
+  const { error } = await supabase.from('listing_inquiries').insert({
     listing_id: owner?.id ?? listing.id,
     user_id: user?.id ?? null,
     landlord_user_id: owner?.created_by ?? null,
@@ -63,6 +77,11 @@ export async function submitListingInquiry(formData: FormData) {
     message: enrichedMessage,
     status: 'new',
   })
+
+  if (error) {
+    console.error('Failed to create listing inquiry', error)
+    redirect(`/listing/${slug}?inquiry=failed`)
+  }
 
   revalidatePath(`/listing/${slug}`)
   redirect(`/listing/${slug}?inquiry=sent`)

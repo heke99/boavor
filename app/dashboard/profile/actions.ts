@@ -1,7 +1,10 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri, sanitizeStorageFileName, toStorageUri, validateProfileDocument } from '@/lib/storage'
 import type { AccountType, AppRole, CompanyType, LegalForm, PreferredListingIntent } from '@/lib/types'
 
 const COMPANY_ROLES: AppRole[] = ['landlord', 'broker', 'company_admin']
@@ -159,8 +162,42 @@ export async function removeCoApplicantAction(formData: FormData) {
 export async function addProfileDocumentAction(formData: FormData) {
   const { supabase, user } = await requireUser()
 
-  const fileName = String(formData.get('fileName') ?? '').trim()
-  const fileUrl = String(formData.get('fileUrl') ?? '').trim()
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'profile_document_upload',
+    subject: user.id,
+    limit: 20,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return
+
+  const uploadedFile = formData.get('file')
+  const rawFileName = String(formData.get('fileName') ?? '').trim()
+  let fileName = rawFileName
+  let fileUrl = String(formData.get('fileUrl') ?? '').trim()
+
+  if (uploadedFile instanceof File && uploadedFile.size > 0) {
+    const validationError = validateProfileDocument(uploadedFile)
+    if (validationError) {
+      console.error('Invalid profile document upload', validationError)
+      return
+    }
+
+    fileName = rawFileName || uploadedFile.name
+    const safeFileName = sanitizeStorageFileName(uploadedFile.name)
+    const storagePath = `${user.id}/${randomUUID()}-${safeFileName}`
+    const { error } = await supabase.storage.from(PROFILE_DOCUMENTS_BUCKET).upload(storagePath, uploadedFile, {
+      contentType: uploadedFile.type || 'application/octet-stream',
+      upsert: false,
+    })
+
+    if (error) {
+      console.error('Failed to upload profile document', error)
+      return
+    }
+
+    fileUrl = toStorageUri(PROFILE_DOCUMENTS_BUCKET, storagePath)
+  }
+
   if (!fileName || !fileUrl) return
 
   await supabase.from('profile_documents').insert({
@@ -181,7 +218,21 @@ export async function removeProfileDocumentAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   if (!id) return
 
+  const { data: document } = await supabase
+    .from('profile_documents')
+    .select('id, file_url')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle<{ id: string; file_url: string }>()
+
+  if (!document) return
+
+  const storageRef = parseStorageUri(document.file_url)
   await supabase.from('profile_documents').delete().eq('id', id).eq('user_id', user.id)
+  if (storageRef) {
+    await supabase.storage.from(storageRef.bucket).remove([storageRef.path])
+  }
+
   revalidatePath('/dashboard/profile')
 }
 
@@ -311,25 +362,5 @@ export async function updatePasswordAction(formData: FormData) {
   if (password !== confirmPassword) throw new Error('Lösenorden matchar inte.')
 
   await supabase.auth.updateUser({ password })
-  revalidatePath('/dashboard/settings')
-}
-
-export async function createPrivacyRequestAction(formData: FormData) {
-  const { supabase, user } = await requireUser()
-  const requestType = String(formData.get('requestType') ?? 'export')
-  const allowedTypes = ['export', 'rectification', 'erasure', 'restriction']
-  if (!allowedTypes.includes(requestType)) return
-
-  const { error } = await supabase.from('privacy_requests').insert({
-    user_id: user.id,
-    request_type: requestType,
-    message: String(formData.get('message') ?? '').trim() || null,
-  })
-
-  if (error) {
-    console.error('Failed to create privacy request', error)
-    return
-  }
-
   revalidatePath('/dashboard/settings')
 }
