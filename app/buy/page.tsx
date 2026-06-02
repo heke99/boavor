@@ -1,7 +1,15 @@
+import type { Metadata } from 'next'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { getPublishedListings } from '@/lib/data/listings'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Bostäder, lokaler och fastigheter till salu',
+  description:
+    'Sök bostäder till salu, hus, lägenheter, lokaler, mark och investeringsfastigheter på Bovaro.',
+  alternates: { canonical: '/buy' },
+}
 
 export default async function BuyPage() {
   const listings = await getPublishedListings({ mode: 'sale' })

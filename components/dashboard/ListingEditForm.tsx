@@ -54,7 +54,7 @@ export function ListingEditForm({ listing, action }: Props) {
   }, [commercialType, segment])
 
   return (
-    <form action={action} className="space-y-7">
+    <form action={action} encType="multipart/form-data" className="space-y-7">
       <input type="hidden" name="listingId" value={listing.id} />
       <input type="hidden" name="listingSegment" value={segment} />
 
@@ -210,7 +210,8 @@ export function ListingEditForm({ listing, action }: Props) {
         ) : null}
 
         <Input name="availableFrom" defaultValue={listing.availableFrom ?? ''} placeholder="Tillgänglig från (YYYY-MM-DD)" />
-        <Input name="imageUrl" defaultValue={listing.coverImageUrl ?? ''} placeholder="Ny/uppdaterad omslagsbild-URL" />
+        <Input name="imageFile" type="file" accept="image/*" />
+        <Input name="imageUrl" defaultValue={listing.coverImageUrl ?? ''} placeholder="Alternativ omslagsbild-URL" />
         <Input name="features" defaultValue={listing.features.join(', ')} placeholder="Egenskaper, separera med kommatecken" className="md:col-span-2 xl:col-span-3" />
 
         <textarea

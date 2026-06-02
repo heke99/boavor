@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { parseStorageUri } from '@/lib/storage'
 import type {
   AppRole,
   CompanyMembershipItem,
@@ -241,7 +242,7 @@ export async function getDashboardProfile() {
     documents: ((documents ?? []) as ProfileDocumentRow[]).map((item) => ({
       id: item.id,
       fileName: item.file_name,
-      fileUrl: item.file_url,
+      fileUrl: parseStorageUri(item.file_url) ? `/dashboard/documents/${item.id}/view` : item.file_url,
       documentType: item.document_type,
       documentStatus: item.document_status ?? 'active',
       documentExpiresAt: item.document_expires_at ?? null,

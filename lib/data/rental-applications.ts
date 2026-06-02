@@ -27,6 +27,7 @@ import type {
 import { calculateApplicationScore } from '@/lib/dashboard/profile-score'
 import { getDashboardProfile } from '@/lib/data/profile'
 import { getListingBySlug } from '@/lib/data/listings'
+import { parseStorageUri } from '@/lib/storage'
 
 type RentalApplicationRow = {
   id: string
@@ -58,10 +59,15 @@ type ApplicationCoApplicantRow = {
 }
 
 type ApplicationDocumentRow = {
+  id: string
   application_id: string
   file_name: string
   file_url: string
   document_type: string
+}
+
+function getApplicationDocumentUrl(document: ApplicationDocumentRow) {
+  return parseStorageUri(document.file_url) ? `/dashboard/applications/documents/${document.id}/view` : document.file_url
 }
 
 type ListingRow = {

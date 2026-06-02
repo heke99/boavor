@@ -41,9 +41,10 @@ export default async function DashboardDocumentsPage() {
           <p className="mt-2 text-sm leading-6 text-[#6b7280]">
             Dokument stärker ansökningar och hjälper hyresvärdar att snabbt förstå om profilen är komplett.
           </p>
-          <form action={addProfileDocumentAction} className="mt-6 grid gap-4">
+          <form action={addProfileDocumentAction} encType="multipart/form-data" className="mt-6 grid gap-4">
             <Input name="fileName" placeholder="Filnamn, t.ex. Lönespecifikation april" required />
-            <Input name="fileUrl" placeholder="Fil-URL" required />
+            <Input name="file" type="file" accept=".pdf,image/*,.doc,.docx" />
+            <Input name="fileUrl" placeholder="Alternativt: säker extern fil-URL" />
             <Select name="documentType" defaultValue="income_proof">
               {documentTypes.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>
@@ -54,7 +55,7 @@ export default async function DashboardDocumentsPage() {
               <input type="checkbox" name="isDefaultForApplications" />
               Använd som standard i framtida ansökningar
             </label>
-            <Button>Lägg till dokument</Button>
+            <Button>Ladda upp dokument</Button>
           </form>
         </Card>
 

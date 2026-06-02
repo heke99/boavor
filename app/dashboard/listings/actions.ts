@@ -1,9 +1,11 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing } from '@/lib/auth/permissions'
 import { requireSignedInUser } from '@/lib/data/rental-applications'
+import { LISTING_IMAGES_BUCKET, sanitizeStorageFileName } from '@/lib/storage'
 import {
   AppRole,
   CommercialType,
@@ -50,6 +52,29 @@ function resolvePropertyType(segment: ListingSegment, formData: FormData) {
   return getDefaultPropertyType(segment)
 }
 
+async function uploadListingImage(
+  supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>,
+  userId: string,
+  formData: FormData,
+) {
+  const uploadedFile = formData.get('imageFile')
+  if (!(uploadedFile instanceof File) || uploadedFile.size === 0) return null
+
+  const safeFileName = sanitizeStorageFileName(uploadedFile.name)
+  const storagePath = `${userId}/${randomUUID()}-${safeFileName}`
+  const { error } = await supabase.storage.from(LISTING_IMAGES_BUCKET).upload(storagePath, uploadedFile, {
+    contentType: uploadedFile.type || 'application/octet-stream',
+    upsert: false,
+  })
+
+  if (error) {
+    console.error('Failed to upload listing image', error)
+    return null
+  }
+
+  return supabase.storage.from(LISTING_IMAGES_BUCKET).getPublicUrl(storagePath).data.publicUrl
+}
+
 export async function createListingAction(formData: FormData) {
   const { supabase, user, profile } = await requireDashboardAccess()
 
@@ -77,7 +102,7 @@ export async function createListingAction(formData: FormData) {
   const rooms = listingSegment === 'residential' ? getNullableNumber(formData, 'rooms') : null
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const availableFrom = getNullableString(formData, 'availableFrom')
-  const imageUrl = getNullableString(formData, 'imageUrl')
+  const imageUrl = (await uploadListingImage(supabase, user.id, formData)) ?? getNullableString(formData, 'imageUrl')
   const minLeaseMonths = listingSegment !== 'residential' ? getNullableNumber(formData, 'minLeaseMonths') : null
   const monthlyServiceFee = listingSegment !== 'residential' ? getNullableNumber(formData, 'monthlyServiceFee') : null
   const isVatApplicable = String(formData.get('isVatApplicable') ?? 'false') === 'true'
@@ -323,7 +348,7 @@ export async function updateListingDetailsAction(formData: FormData) {
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const featuresRaw = String(formData.get('features') ?? '').trim()
   const features = Array.from(new Set(featuresRaw ? featuresRaw.split(',').map((item) => item.trim()).filter(Boolean) : []))
-  const imageUrl = getNullableString(formData, 'imageUrl')
+  const imageUrl = (await uploadListingImage(supabase, user.id, formData)) ?? getNullableString(formData, 'imageUrl')
   const pricePerSqm = areaSqm && price ? Math.round(price / areaSqm) : null
 
   const updatePayload = {

@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import {
   BadgeCheck,
@@ -18,12 +19,58 @@ import { ListingGrid } from '@/components/listings/ListingGrid'
 import { Card } from '@/components/ui/Card'
 import { getListingPrimaryMeta, isRentalApplicationListing, listingTypeLabels } from '@/lib/listing-options'
 import { submitListingInquiry } from './actions'
+import { getSiteUrl } from '@/lib/url'
 
 export const dynamic = 'force-dynamic'
 
 type Props = {
   params: Promise<{ slug: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const listing = await getListingBySlug(slug)
+
+  if (!listing) {
+    return {
+      title: 'Objektet kunde inte hittas',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const siteUrl = getSiteUrl()
+  const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
+  const title = `${listing.title} i ${listing.city}`
+  const description = [
+    `${primaryMeta} ${listing.listingType === 'rent' ? 'för uthyrning' : 'till salu'} i ${listing.city}.`,
+    listing.areaSqm ? `${listing.areaSqm} m².` : '',
+    listing.description,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 180)
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/listing/${listing.slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${siteUrl}/listing/${listing.slug}`,
+      type: 'article',
+      images: listing.imageUrl ? [{ url: listing.imageUrl, alt: listing.title }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: listing.imageUrl ? [listing.imageUrl] : undefined,
+    },
+  }
 }
 
 function formatDate(value: string | null | undefined) {
