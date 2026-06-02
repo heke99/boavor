@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { actionError, actionOk } from '@/lib/action-result'
+import { actionError, actionOk } from './action-result'
 
 describe('action result helpers', () => {
   it('creates success results', () => {

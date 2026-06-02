@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getSafeNextPath } from '@/lib/url'
+import { getSafeNextPath } from './url'
 
 describe('url helpers', () => {
   it('allows internal paths', () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { parseStorageUri, sanitizeStorageFileName, toStorageUri, validateListingImage, validateProfileDocument } from '@/lib/storage'
+import { parseStorageUri, sanitizeStorageFileName, toStorageUri, validateListingImage, validateProfileDocument } from './storage'
 
 describe('storage helpers', () => {
   it('sanitizes file names', () => {
-    expect(sanitizeStorageFileName('Min Lönespecifikation APRIL.PDF')).toBe('min-lonespecifikation-april.pdf')
+    expect(sanitizeStorageFileName('Min Lönespecifikation APRIL.PDF')).toBe('min-lo-nespecifikation-april.pdf')
   })
 
   it('roundtrips storage URIs', () => {

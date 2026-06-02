@@ -31,6 +31,9 @@ export type AdminCompanyRow = {
   legalForm: string | null
   businessPurpose: string | null
   verificationStatus: 'pending' | 'verified' | 'rejected' | string
+  verificationNote: string | null
+  verifiedAt: string | null
+  verifiedBy: string | null
   createdAt: string
   listingsCount: number
   membersCount: number
@@ -161,7 +164,7 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
 
   let query = supabase
     .from('companies')
-    .select('id, name, slug, organization_number, org_number, email, phone, city, legal_form, business_purpose, verification_status, created_at')
+    .select('id, name, slug, organization_number, org_number, email, phone, city, legal_form, business_purpose, verification_status, verification_note, verified_at, verified_by, created_at')
     .order('created_at', { ascending: false })
 
   if (params.q) query = query.or(`name.ilike.${like(params.q)},organization_number.ilike.${like(params.q)},org_number.ilike.${like(params.q)},email.ilike.${like(params.q)}`)
@@ -198,6 +201,9 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
     legal_form: string | null
     business_purpose: string | null
     verification_status: string
+    verification_note?: string | null
+    verified_at?: string | null
+    verified_by?: string | null
     created_at: string
   }>).map((row) => ({
     id: row.id,
@@ -210,6 +216,9 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
     legalForm: row.legal_form,
     businessPurpose: row.business_purpose,
     verificationStatus: row.verification_status,
+    verificationNote: row.verification_note ?? null,
+    verifiedAt: row.verified_at ?? null,
+    verifiedBy: row.verified_by ?? null,
     createdAt: row.created_at,
     listingsCount: listingCounts.get(row.id) ?? 0,
     membersCount: memberCounts.get(row.id) ?? 0,
