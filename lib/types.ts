@@ -35,12 +35,27 @@ export type AppRole =
 
 export type ListingStatus = 'draft' | 'published' | 'paused' | 'rented' | 'sold' | 'archived'
 export type RentalApplicationStatus =
+  | 'draft'
   | 'submitted'
+  | 'screening'
+  | 'qualified'
+  | 'not_qualified'
   | 'reviewing'
   | 'shortlisted'
+  | 'viewing_invited'
+  | 'viewing_booked'
   | 'offered'
+  | 'offer_accepted'
+  | 'contract_pending'
+  | 'signed'
   | 'rejected'
   | 'withdrawn'
+  | 'expired'
+  | 'rented_to_other'
+  // Legacy values from the original live enum (normalized by the status machine)
+  | 'received'
+  | 'reserve'
+  | 'viewing'
 
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired' | 'trialing'
 
@@ -322,6 +337,9 @@ export type RentalApplicationItem = {
   applicantsCountForListing?: number
   applicantScore?: number
   policyResult?: MatchkollResultValue | null
+  randomRank?: number | null
+  rejectionReason?: string | null
+  history?: Array<{ fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }>
   listing: {
     slug: string
     title: string
@@ -391,11 +409,15 @@ export type ListingRentalRequirementItem = {
   referencesRequired: boolean
 }
 
+export type SelectionMethodValue = 'strict_queue' | 'guided_queue' | 'first_come' | 'random' | 'manual_with_policy'
+
 export type ManagedListingDetailItem = ManagedListingItem & {
   description: string | null
   street: string | null
   areaName: string | null
   availableFrom: string | null
+  selectionMethod?: SelectionMethodValue
+  applicationDeadlineAt?: string | null
   images: Array<{ id: string; imageUrl: string; altText: string | null; isCover: boolean; position: number }>
   applications: RentalApplicationItem[]
   inquiries: ListingInquiryItem[]

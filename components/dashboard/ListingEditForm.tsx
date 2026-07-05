@@ -283,6 +283,16 @@ export function ListingEditForm({ listing, action, policies = [], assignedPolicy
                   </Select>
                 </div>
               ) : null}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Urvalsmetod</label>
+                <Select name="selectionMethod" defaultValue={listing.selectionMethod ?? 'manual_with_policy'}>
+                  <option value="manual_with_policy">Manuellt urval med krav</option>
+                  <option value="strict_queue">Strikt kötid</option>
+                  <option value="guided_queue">Vägledd kötid (rekommendation)</option>
+                  <option value="first_come">Först till kvarn</option>
+                  <option value="random">Slumpad ordning efter deadline</option>
+                </Select>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
                   <input type="checkbox" name="isStudentHousing" defaultChecked={listing.isStudentHousing ?? false} />

@@ -5,25 +5,11 @@ import { Button } from '@/components/ui/Button'
 import { getUserApplications, requireSignedInUser } from '@/lib/data/rental-applications'
 import { getApplicationLimitCheck } from '@/lib/data/queue'
 import { isActiveApplicationStatus } from '@/lib/queue/limits'
-import { withdrawApplicationAction } from './actions'
+import { normalizeStatus, statusLabel } from '@/lib/applications/status-machine'
+import { acceptOfferAction, confirmViewingAction, declineOfferAction, withdrawApplicationAction } from './actions'
 import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
-
-const statusLabels: Record<string, string> = {
-  submitted: 'Skickad',
-  reviewing: 'Granskas',
-  shortlisted: 'Shortlistad',
-  offered: 'Erbjuden',
-  rejected: 'Avslagen',
-  withdrawn: 'Återtagen',
-  signed: 'Kontrakt signerat',
-  draft: 'Utkast',
-  received: 'Mottagen',
-  qualified: 'Kvalificerad',
-  reserve: 'Reserv',
-  viewing: 'Visning',
-}
 
 function competitionLabel(count: number) {
   if (count >= 80) return 'Hög konkurrens'
@@ -87,7 +73,7 @@ export default async function DashboardApplicationsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2 md:justify-end">
                     <div className="rounded-full bg-[#eef2ff] px-4 py-2 text-sm font-semibold text-[#243b8f]">
-                      {statusLabels[application.status] ?? application.status}
+                      {statusLabel(application.status)}
                     </div>
                     <div className="rounded-full bg-[#f7f8fc] px-4 py-2 text-sm font-semibold text-[#111827]">
                       {applicantsCount} sökande
@@ -117,6 +103,55 @@ export default async function DashboardApplicationsPage() {
 
                 {application.coverLetter ? (
                   <div className="mt-6 rounded-2xl border border-[#e8ebf3] p-4 text-sm leading-7 text-[#6b7280]">{application.coverLetter}</div>
+                ) : null}
+
+                {normalizeStatus(application.status) === 'offered' ? (
+                  <div className="mt-6 rounded-2xl border border-[#bbf7d0] bg-[#f0fdf4] p-4">
+                    <div className="text-sm font-semibold text-[#166534]">
+                      Du har fått ett erbjudande om bostaden. Svara så snart du kan.
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <form action={acceptOfferAction}>
+                        <input type="hidden" name="applicationId" value={application.id} />
+                        <Button type="submit" className="h-10">Acceptera erbjudandet</Button>
+                      </form>
+                      <form action={declineOfferAction}>
+                        <input type="hidden" name="applicationId" value={application.id} />
+                        <Button type="submit" variant="ghost" className="h-10 border border-black/10">Tacka nej</Button>
+                      </form>
+                    </div>
+                  </div>
+                ) : null}
+
+                {normalizeStatus(application.status) === 'viewing_invited' ? (
+                  <div className="mt-6 rounded-2xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
+                    <div className="text-sm font-semibold text-[#1d4ed8]">
+                      Du är inbjuden till visning. Bekräfta att du kommer.
+                    </div>
+                    <form action={confirmViewingAction} className="mt-3">
+                      <input type="hidden" name="applicationId" value={application.id} />
+                      <Button type="submit" className="h-10">Bekräfta visning</Button>
+                    </form>
+                  </div>
+                ) : null}
+
+                {application.history && application.history.length > 0 ? (
+                  <details className="mt-6 rounded-2xl border border-[#e8ebf3] p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-[#5b3df5]">
+                      Historik ({application.history.length} händelser)
+                    </summary>
+                    <ol className="mt-3 space-y-2 border-l-2 border-[#e8ebf3] pl-4">
+                      {application.history.map((event, index) => (
+                        <li key={`${application.id}-history-${index}`} className="text-sm">
+                          <span className="font-semibold text-[#111827]">{statusLabel(event.toStatus)}</span>
+                          <span className="ml-2 text-xs text-[#6b7280]">
+                            {new Date(event.createdAt).toLocaleString('sv-SE')}
+                          </span>
+                          {event.note ? <div className="text-xs text-[#6b7280]">{event.note}</div> : null}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                 ) : null}
 
                 <div className="mt-6 flex flex-wrap items-center gap-4">

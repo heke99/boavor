@@ -3,7 +3,8 @@
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing } from '@/lib/auth/permissions'
+import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing, isAdminRole } from '@/lib/auth/permissions'
+import { canTransition } from '@/lib/applications/status-machine'
 import { requireSignedInUser } from '@/lib/data/rental-applications'
 import { LISTING_IMAGES_BUCKET, sanitizeStorageFileName, validateListingImage } from '@/lib/storage'
 import {
@@ -227,21 +228,175 @@ export async function createListingAction(formData: FormData) {
 }
 
 export async function updateApplicationStatusAction(formData: FormData) {
-  const { supabase, profile } = await requireDashboardAccess()
+  const { supabase, user, profile } = await requireDashboardAccess()
   const applicationId = String(formData.get('applicationId') ?? '')
-  const status = String(formData.get('status') ?? 'reviewing') as RentalApplicationStatus
-  if (!applicationId) return
+  const status = String(formData.get('status') ?? '') as RentalApplicationStatus
+  const rejectionReason = String(formData.get('rejectionReason') ?? '').trim() || null
+  if (!applicationId || !status) return
 
   const { data: application } = await supabase
     .from('rental_applications')
-    .select('id, landlord_user_id, landlord_company_id')
+    .select('id, status, landlord_user_id, landlord_company_id')
     .eq('id', applicationId)
-    .maybeSingle<{ id: string; landlord_user_id: string | null; landlord_company_id: string | null }>()
-  if (!canManageApplication(profile, application)) return
+    .maybeSingle<{ id: string; status: string; landlord_user_id: string | null; landlord_company_id: string | null }>()
+  if (!application || !canManageApplication(profile, application)) return
 
-  await supabase.from('rental_applications').update({ status }).eq('id', applicationId)
+  // Server-side transition guard — the UI dropdown is not authoritative.
+  const actor = isAdminRole(profile.role) ? 'admin' : 'landlord'
+  if (!canTransition(application.status, status, actor)) {
+    console.error('Blocked invalid application status transition', application.status, '→', status)
+    return
+  }
+
+  // Rejections must carry a reason.
+  if (status === 'rejected' && !rejectionReason) return
+
+  const { error } = await supabase
+    .from('rental_applications')
+    .update({
+      status,
+      rejection_reason: status === 'rejected' ? rejectionReason : null,
+      status_updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+
+  if (error) {
+    console.error('Failed to update application status', error)
+    return
+  }
+
+  await supabase.from('rental_application_status_history').insert({
+    application_id: applicationId,
+    actor_user_id: user.id,
+    from_status: application.status as RentalApplicationStatus,
+    to_status: status,
+    note: rejectionReason,
+  })
+
   revalidatePath('/dashboard/listings')
   revalidatePath('/dashboard/applications')
+}
+
+/**
+ * Generates the auditable random order for a listing using the "random"
+ * selection method. Only allowed once (ranks are never regenerated) and only
+ * after the application deadline has passed.
+ */
+export async function generateRandomOrderAction(formData: FormData) {
+  const { supabase, user, profile } = await requireDashboardAccess()
+  const listingId = String(formData.get('listingId') ?? '')
+  if (!listingId) return
+
+  const listing = await userCanManageListing(supabase, user.id, listingId)
+  if (!listing) return
+
+  const { data: listingDetails } = await supabase
+    .from('listings')
+    .select('selection_method, application_deadline')
+    .eq('id', listingId)
+    .maybeSingle()
+
+  if (listingDetails?.selection_method !== 'random') return
+  if (listingDetails.application_deadline && new Date(listingDetails.application_deadline).getTime() > Date.now()) {
+    return
+  }
+
+  const { data: applications } = await supabase
+    .from('rental_applications')
+    .select('id, random_rank')
+    .eq('listing_id', listingId)
+
+  const unranked = (applications ?? []).filter((row) => row.random_rank === null)
+  if (unranked.length === 0) return
+
+  for (const row of unranked) {
+    await supabase.from('rental_applications').update({ random_rank: Math.random() }).eq('id', row.id)
+  }
+
+  await logListingActivity(supabase, {
+    listingId,
+    actorUserId: user.id,
+    eventType: 'random_order_generated',
+    message: `Slumpad urvalsordning genererad för ${unranked.length} ansökningar.`,
+    payload: { count: unranked.length, actor_role: profile.role },
+  })
+
+  revalidatePath(`/dashboard/listings/${listingId}`)
+}
+
+/** Bulk rejection with a shared reason. Each transition is validated. */
+export async function bulkRejectApplicationsAction(formData: FormData) {
+  const { supabase, user, profile } = await requireDashboardAccess()
+  const applicationIds = formData.getAll('applicationIds').map(String).filter(Boolean)
+  const rejectionReason = String(formData.get('rejectionReason') ?? '').trim()
+  const confirmed = formData.get('confirmBulk') === 'on'
+  if (applicationIds.length === 0 || !rejectionReason || !confirmed) return
+
+  const actor = isAdminRole(profile.role) ? 'admin' : 'landlord'
+
+  for (const applicationId of applicationIds) {
+    const { data: application } = await supabase
+      .from('rental_applications')
+      .select('id, status, landlord_user_id, landlord_company_id')
+      .eq('id', applicationId)
+      .maybeSingle<{ id: string; status: string; landlord_user_id: string | null; landlord_company_id: string | null }>()
+
+    if (!application || !canManageApplication(profile, application)) continue
+    if (!canTransition(application.status, 'rejected', actor)) continue
+
+    await supabase
+      .from('rental_applications')
+      .update({ status: 'rejected', rejection_reason: rejectionReason, status_updated_at: new Date().toISOString() })
+      .eq('id', applicationId)
+
+    await supabase.from('rental_application_status_history').insert({
+      application_id: applicationId,
+      actor_user_id: user.id,
+      from_status: application.status as RentalApplicationStatus,
+      to_status: 'rejected',
+      note: `Bulk: ${rejectionReason}`,
+    })
+  }
+
+  revalidatePath('/dashboard/listings')
+  revalidatePath('/dashboard/applications')
+}
+
+/** "Request more info" — notifies the applicant with a permission check in SQL. */
+export async function requestApplicationInfoAction(formData: FormData) {
+  const { supabase, user } = await requireDashboardAccess()
+  const applicationId = String(formData.get('applicationId') ?? '')
+  const message = String(formData.get('message') ?? '').trim()
+  if (!applicationId || !message) return
+
+  const { error } = await supabase.rpc('notify_application_applicant', {
+    p_application_id: applicationId,
+    p_title: 'Hyresvärden behöver komplettering',
+    p_body: message,
+  })
+
+  if (error) {
+    console.error('Failed to request application info', error)
+    return
+  }
+
+  const { data: application } = await supabase
+    .from('rental_applications')
+    .select('status')
+    .eq('id', applicationId)
+    .maybeSingle()
+
+  if (application) {
+    await supabase.from('rental_application_status_history').insert({
+      application_id: applicationId,
+      actor_user_id: user.id,
+      from_status: application.status,
+      to_status: application.status,
+      note: `Kompletteringsbegäran: ${message}`,
+    })
+  }
+
+  revalidatePath('/dashboard/listings')
 }
 
 export async function updateInquiryStatusAction(formData: FormData) {
@@ -423,7 +578,12 @@ export async function updateListingDetailsAction(formData: FormData) {
     rooms: listingSegment === 'residential' ? getNullableNumber(formData, 'rooms') : null,
     available_from: getNullableString(formData, 'availableFrom'),
     published_at: status === 'published' ? new Date().toISOString() : null,
-    // Rental process settings (Batch 5)
+    // Rental process settings (Batch 5/7)
+    selection_method: ['strict_queue', 'guided_queue', 'first_come', 'random', 'manual_with_policy'].includes(
+      String(formData.get('selectionMethod') ?? ''),
+    )
+      ? String(formData.get('selectionMethod'))
+      : 'manual_with_policy',
     is_student_housing: formData.get('isStudentHousing') === 'on',
     is_senior_housing: formData.get('isSeniorHousing') === 'on',
     is_short_term: formData.get('isShortTerm') === 'on',

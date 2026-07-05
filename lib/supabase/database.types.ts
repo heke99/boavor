@@ -993,6 +993,7 @@ export type Database = {
           property_type: Database["public"]["Enums"]["property_type"]
           published_at: string | null
           rooms: number | null
+          selection_method: string
           show_applicant_count: boolean
           slug: string
           status: Database["public"]["Enums"]["listing_status"]
@@ -1074,6 +1075,7 @@ export type Database = {
           property_type: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          selection_method?: string
           show_applicant_count?: boolean
           slug: string
           status?: Database["public"]["Enums"]["listing_status"]
@@ -1155,6 +1157,7 @@ export type Database = {
           property_type?: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          selection_method?: string
           show_applicant_count?: boolean
           slug?: string
           status?: Database["public"]["Enums"]["listing_status"]
@@ -1747,6 +1750,8 @@ export type Database = {
           pets: boolean
           queue_joined_at_snapshot: string | null
           queue_points_snapshot: number
+          random_rank: number | null
+          rejection_reason: string | null
           smoking: boolean
           status: Database["public"]["Enums"]["rental_application_status"]
           status_updated_at: string | null
@@ -1786,6 +1791,8 @@ export type Database = {
           pets?: boolean
           queue_joined_at_snapshot?: string | null
           queue_points_snapshot?: number
+          random_rank?: number | null
+          rejection_reason?: string | null
           smoking?: boolean
           status?: Database["public"]["Enums"]["rental_application_status"]
           status_updated_at?: string | null
@@ -1825,6 +1832,8 @@ export type Database = {
           pets?: boolean
           queue_joined_at_snapshot?: string | null
           queue_points_snapshot?: number
+          random_rank?: number | null
+          rejection_reason?: string | null
           smoking?: boolean
           status?: Database["public"]["Enums"]["rental_application_status"]
           status_updated_at?: string | null
@@ -2412,6 +2421,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      notify_application_applicant: {
+        Args: { p_application_id: string; p_body: string; p_title: string }
+        Returns: undefined
+      }
       public_listing_applicant_count: {
         Args: { p_listing_id: string }
         Returns: number
@@ -2534,6 +2547,14 @@ export type Database = {
         | "signed"
         | "shortlisted"
         | "withdrawn"
+        | "screening"
+        | "not_qualified"
+        | "viewing_invited"
+        | "viewing_booked"
+        | "offer_accepted"
+        | "contract_pending"
+        | "expired"
+        | "rented_to_other"
       sale_lead_status:
         | "new"
         | "contacted"
@@ -2803,6 +2824,14 @@ export const Constants = {
         "signed",
         "shortlisted",
         "withdrawn",
+        "screening",
+        "not_qualified",
+        "viewing_invited",
+        "viewing_booked",
+        "offer_accepted",
+        "contract_pending",
+        "expired",
+        "rented_to_other",
       ],
       sale_lead_status: [
         "new",

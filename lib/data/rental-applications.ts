@@ -37,6 +37,8 @@ type RentalApplicationRow = {
   cover_letter: string | null
   queue_points_snapshot: number
   queue_joined_at_snapshot: string | null
+  random_rank?: number | null
+  rejection_reason?: string | null
   listing_slug: string
   listing_title: string
   listing_city: string
@@ -183,7 +185,25 @@ export async function getUserApplications() {
     applicantsCountMap.set(row.listing_id, (applicantsCountMap.get(row.listing_id) ?? 0) + 1)
   }
 
+  // Status timeline for the applicant's own applications.
+  const applicationIds = ((applications ?? []) as RentalApplicationRow[]).map((row) => row.id)
+  const { data: historyRows } = applicationIds.length
+    ? await supabase
+        .from('rental_application_status_history')
+        .select('application_id, from_status, to_status, note, created_at')
+        .in('application_id', applicationIds)
+        .order('created_at', { ascending: true })
+    : { data: [] }
+
+  const historyMap = new Map<string, Array<{ fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }>>()
+  for (const row of historyRows ?? []) {
+    const current = historyMap.get(row.application_id) ?? []
+    current.push({ fromStatus: row.from_status, toStatus: row.to_status, note: row.note, createdAt: row.created_at })
+    historyMap.set(row.application_id, current)
+  }
+
   return ((applications ?? []) as RentalApplicationRow[]).map((row) => ({
+    history: historyMap.get(row.id) ?? [],
     id: row.id,
     listingId: row.listing_id,
     status: row.status,
@@ -542,6 +562,8 @@ function mapApplicationRows(
       coverLetter: row.cover_letter,
       queuePointsSnapshot: row.queue_points_snapshot,
       queueJoinedAtSnapshot: row.queue_joined_at_snapshot,
+      randomRank: row.random_rank ?? null,
+      rejectionReason: row.rejection_reason ?? null,
       listing: {
         slug: row.listing_slug,
         title: row.listing_title,
@@ -584,9 +606,9 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
 
   const { data: listing, error } = await supabase
     .from('listings')
-    .select('id, slug, title, description, street, area_name, available_from, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .select('id, slug, title, description, street, area_name, available_from, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id, selection_method, application_deadline')
     .eq('id', listingId)
-    .maybeSingle<ManagedListingDetailRow & { created_by: string | null; company_id: string | null }>()
+    .maybeSingle<ManagedListingDetailRow & { created_by: string | null; company_id: string | null; selection_method?: string | null; application_deadline?: string | null }>()
 
   if (error) {
     console.error('Failed to fetch managed listing detail', error)
@@ -606,7 +628,7 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
       .order('position', { ascending: true }),
     supabase
       .from('rental_applications')
-      .select('id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size')
+      .select('id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size, random_rank, rejection_reason')
       .eq('listing_id', listingId)
       .order('created_at', { ascending: false }),
     supabase
@@ -696,6 +718,8 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
     street: listing.street,
     areaName: listing.area_name,
     availableFrom: listing.available_from,
+    selectionMethod: (listing.selection_method ?? 'manual_with_policy') as NonNullable<ManagedListingDetailItem['selectionMethod']>,
+    applicationDeadlineAt: listing.application_deadline ?? null,
     images: ((images ?? []) as ListingImageRow[]).map((image) => ({
       id: image.id,
       imageUrl: image.image_url,
