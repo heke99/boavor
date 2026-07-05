@@ -6,8 +6,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { submitRentalApplication } from './actions'
-import { getApplyPageData } from '@/lib/data/rental-applications'
+import { getApplyPageData, requireSignedInUser } from '@/lib/data/rental-applications'
 import { getIdentityState } from '@/lib/data/identity'
+import { getApplicationLimitCheck } from '@/lib/data/queue'
 import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,12 @@ type Props = {
 
 export default async function ApplyPage({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const [{ listing, profile }, identity] = await Promise.all([getApplyPageData(slug), getIdentityState()])
+  const [{ listing, profile }, identity, { supabase, user }] = await Promise.all([
+    getApplyPageData(slug),
+    getIdentityState(),
+    requireSignedInUser(),
+  ])
+  const limitCheck = await getApplicationLimitCheck(supabase, user.id)
 
   if (listing.listingType !== 'rent') redirect(`/listing/${slug}`)
 
@@ -34,7 +40,9 @@ export default async function ApplyPage({ params, searchParams }: Props) {
           ? 'Du måste vara minst 18 år för att kunna ansöka om bostad.'
           : errorCode === 'consent_required'
             ? 'Du måste godkänna att dina uppgifter delas med hyresvärden.'
-            : null
+            : errorCode === 'limit_reached'
+              ? `Du har nått gränsen för aktiva ansökningar (${limitCheck.limit} st). Återkalla en ansökan eller vänta tills en avslutas.`
+              : null
 
   if (!identity.isVerified || !identity.isAdult) {
     return (
@@ -85,6 +93,17 @@ export default async function ApplyPage({ params, searchParams }: Props) {
     >
       {errorMessage ? (
         <div className="rounded-2xl bg-[#fef2f2] p-4 text-sm font-semibold text-[#b91c1c]">{errorMessage}</div>
+      ) : null}
+      {!limitCheck.canApply ? (
+        <div className="rounded-2xl bg-[#fef2f2] p-4 text-sm font-semibold text-[#b91c1c]">
+          Du har {limitCheck.activeCount} aktiva ansökningar av max {limitCheck.limit}. Du kan inte skicka fler just
+          nu — återkalla en ansökan under Ansökningar för att frigöra en plats.
+        </div>
+      ) : limitCheck.remaining <= 2 ? (
+        <div className="rounded-2xl bg-[#fffbeb] p-4 text-sm font-semibold text-[#92400e]">
+          Du har {limitCheck.activeCount} av max {limitCheck.limit} aktiva ansökningar. {limitCheck.remaining} plats
+          {limitCheck.remaining === 1 ? '' : 'er'} kvar.
+        </div>
       ) : null}
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <Card className="p-6">

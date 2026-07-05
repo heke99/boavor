@@ -101,20 +101,6 @@ type CompanyMembershipRow = {
   } | null
 }
 
-function addMonths(dateString: string, months: number) {
-  const date = new Date(dateString)
-  date.setMonth(date.getMonth() + months)
-  return date
-}
-
-function fullMonthsBetween(start: string, end: Date) {
-  const startDate = new Date(start)
-  let months = (end.getFullYear() - startDate.getFullYear()) * 12 + (end.getMonth() - startDate.getMonth())
-  const candidate = addMonths(start, months)
-  if (candidate > end) months -= 1
-  return Math.max(0, months)
-}
-
 async function ensureProfileExists(userId: string) {
   const supabase = await createSupabaseServerClient()
   if (!supabase) return
@@ -125,55 +111,9 @@ async function ensureProfileExists(userId: string) {
   }
 }
 
-async function syncQueueMembership(userId: string) {
-  const supabase = await createSupabaseServerClient()
-  if (!supabase) return
-
-  const { data: membership } = await supabase
-    .from('queue_memberships')
-    .select('id, membership_status, joined_queue_at, current_points, months_in_queue, last_point_awarded_at, next_billing_at')
-    .eq('user_id', userId)
-    .maybeSingle<QueueMembershipRow>()
-
-  if (!membership || membership.membership_status !== 'active') return
-
-  const { data: subscription } = await supabase
-    .from('user_subscriptions')
-    .select('status')
-    .eq('user_id', userId)
-    .eq('plan_code', 'queue_monthly')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<SubscriptionRow>()
-
-  if (!subscription || subscription.status !== 'active') return
-
-  const now = new Date()
-  const monthsEarned = fullMonthsBetween(membership.joined_queue_at, now)
-  if (monthsEarned <= membership.current_points) return
-
-  const delta = monthsEarned - membership.current_points
-  const nextBillingAt = addMonths(membership.joined_queue_at, monthsEarned + 1).toISOString()
-
-  await supabase
-    .from('queue_memberships')
-    .update({
-      current_points: monthsEarned,
-      months_in_queue: monthsEarned,
-      last_point_awarded_at: now.toISOString(),
-      next_billing_at: nextBillingAt,
-    })
-    .eq('id', membership.id)
-
-  await supabase.from('queue_point_ledger').insert({
-    user_id: userId,
-    membership_id: membership.id,
-    event_type: 'monthly_accrual',
-    points_delta: delta,
-    balance_after: monthsEarned,
-    note: `${delta} månad(er) köpoäng uppdaterade automatiskt.`,
-  })
-}
+// Queue points are awarded by the scheduled job /api/cron/award-queue-points
+// (1 point per day, ledger-driven, idempotent). The previous ad-hoc month sync
+// on page render has been removed.
 
 export async function getDashboardProfile() {
   const supabase = await createSupabaseServerClient()
@@ -188,7 +128,6 @@ export async function getDashboardProfile() {
   }
 
   await ensureProfileExists(user.id)
-  await syncQueueMembership(user.id)
 
   const { data: profileRow } = await supabase
     .from('profiles')

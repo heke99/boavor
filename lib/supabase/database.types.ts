@@ -1261,6 +1261,8 @@ export type Database = {
           membership_status: Database["public"]["Enums"]["queue_membership_status"]
           months_in_queue: number
           next_billing_at: string | null
+          points_reset_at: string | null
+          queue_type: string
           updated_at: string
           user_id: string
         }
@@ -1273,6 +1275,8 @@ export type Database = {
           membership_status?: Database["public"]["Enums"]["queue_membership_status"]
           months_in_queue?: number
           next_billing_at?: string | null
+          points_reset_at?: string | null
+          queue_type?: string
           updated_at?: string
           user_id: string
         }
@@ -1285,6 +1289,8 @@ export type Database = {
           membership_status?: Database["public"]["Enums"]["queue_membership_status"]
           months_in_queue?: number
           next_billing_at?: string | null
+          points_reset_at?: string | null
+          queue_type?: string
           updated_at?: string
           user_id?: string
         }
@@ -1792,6 +1798,7 @@ export type Database = {
           id: string
           interval_unit: string
           is_active: boolean
+          max_active_applications: number | null
           name: string
           updated_at: string
         }
@@ -1802,6 +1809,7 @@ export type Database = {
           id?: string
           interval_unit?: string
           is_active?: boolean
+          max_active_applications?: number | null
           name: string
           updated_at?: string
         }
@@ -1812,6 +1820,7 @@ export type Database = {
           id?: string
           interval_unit?: string
           is_active?: boolean
+          max_active_applications?: number | null
           name?: string
           updated_at?: string
         }
@@ -2008,6 +2017,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_queue_points: {
+        Args: {
+          p_delta: number
+          p_joined_at?: string
+          p_note: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       admin_identity_overview: {
         Args: never
         Returns: {
@@ -2020,6 +2038,26 @@ export type Database = {
           user_id: string
           verified_at: string
         }[]
+      }
+      admin_queue_overview: {
+        Args: never
+        Returns: {
+          current_points: number
+          joined_queue_at: string
+          membership_id: string
+          membership_status: Database["public"]["Enums"]["queue_membership_status"]
+          points_reset_at: string
+          queue_type: string
+          user_id: string
+        }[]
+      }
+      admin_set_queue_status: {
+        Args: {
+          p_note: string
+          p_status: Database["public"]["Enums"]["queue_membership_status"]
+          p_user_id: string
+        }
+        Returns: Json
       }
       admin_user_overview: {
         Args: never
@@ -2035,6 +2073,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      award_queue_points_daily: { Args: never; Returns: Json }
       check_rate_limit: {
         Args: {
           input_ip_hash: string
@@ -2090,6 +2129,17 @@ export type Database = {
           inviter_name: string
           relationship: string
         }[]
+      }
+      household_queue_points: {
+        Args: never
+        Returns: {
+          points: number
+          user_id: string
+        }[]
+      }
+      reset_queue_points: {
+        Args: { p_reason: string; p_user_id: string }
+        Returns: Json
       }
       respond_co_applicant_invite: {
         Args: { p_accept: boolean; p_token: string }
@@ -2190,6 +2240,8 @@ export type Database = {
         | "paused"
         | "resumed"
         | "cancelled"
+        | "daily_accrual"
+        | "reset"
       rental_application_status:
         | "draft"
         | "submitted"
@@ -2456,6 +2508,8 @@ export const Constants = {
         "paused",
         "resumed",
         "cancelled",
+        "daily_accrual",
+        "reset",
       ],
       rental_application_status: [
         "draft",

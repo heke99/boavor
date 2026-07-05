@@ -7,6 +7,8 @@ import { getApplyPageData, buildApplicantFullName } from '@/lib/data/rental-appl
 import { requireVerifiedAdult } from '@/lib/data/identity'
 import { recordConsent } from '@/lib/consents/consents'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/data/queue'
+import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -35,6 +37,12 @@ export async function submitRentalApplication(formData: FormData) {
 
   if (!dataSharingConsent) {
     redirect(`/listing/${slug}/apply?error=consent_required`)
+  }
+
+  // Active application limit (server-side; the UI warning is cosmetic).
+  const limitCheck = await getApplicationLimitCheck(supabase, user.id)
+  if (!limitCheck.canApply) {
+    redirect(`/listing/${slug}/apply?error=limit_reached`)
   }
 
   const allowed = await checkRateLimit(supabase, {
@@ -73,6 +81,20 @@ export async function submitRentalApplication(formData: FormData) {
     redirect('/dashboard/applications?duplicate=1')
   }
 
+  // Household queue rule: with linked, accepted co-applicants the effective
+  // queue points follow the configured rule (default: highest in household).
+  const ownPoints = profile.queueMembership?.currentPoints ?? 0
+  const selectedCoApplicantSet = new Set(selectedCoApplicants)
+  const linkedCoApplicantPoints =
+    selectedCoApplicants.length > 0
+      ? await getHouseholdCoApplicantPoints(supabase)
+      : []
+  const effectiveQueuePoints = resolveHouseholdQueuePoints(
+    DEFAULT_HOUSEHOLD_QUEUE_RULE,
+    ownPoints,
+    selectedCoApplicantSet.size > 0 ? linkedCoApplicantPoints : [],
+  )
+
   const { data: created, error } = await supabase
     .from('rental_applications')
     .insert({
@@ -91,7 +113,7 @@ export async function submitRentalApplication(formData: FormData) {
       applicant_phone: profile.phone || null,
       applicant_monthly_income: monthlyIncomeValue ? Number(monthlyIncomeValue) : profile.monthlyIncome,
       applicant_household_size: householdSizeValue ? Number(householdSizeValue) : profile.householdSize,
-      queue_points_snapshot: profile.queueMembership?.currentPoints ?? 0,
+      queue_points_snapshot: effectiveQueuePoints,
       queue_joined_at_snapshot: profile.queueMembership?.joinedQueueAt ?? null,
       cover_letter: coverLetter,
       move_in_date: moveInDate,

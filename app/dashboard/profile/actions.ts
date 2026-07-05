@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri, sanitizeStorageFileName, toStorageUri, validateProfileDocument } from '@/lib/storage'
@@ -315,6 +316,19 @@ export async function removeProfileDocumentAction(formData: FormData) {
 
 export async function startQueueMembershipAction() {
   const { supabase, user } = await requireUser()
+
+  // Queue membership requires a verified identity (free after verification).
+  const { data: verifiedIdentity } = await supabase
+    .from('identity_verifications')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'verified')
+    .limit(1)
+    .maybeSingle()
+
+  if (!verifiedIdentity) {
+    redirect('/dashboard/identity?reason=queue')
+  }
 
   const now = new Date().toISOString()
   const nextBillingAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()

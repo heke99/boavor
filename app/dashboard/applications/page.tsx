@@ -1,18 +1,28 @@
 import Link from 'next/link'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { Card } from '@/components/ui/Card'
-import { getUserApplications } from '@/lib/data/rental-applications'
+import { Button } from '@/components/ui/Button'
+import { getUserApplications, requireSignedInUser } from '@/lib/data/rental-applications'
+import { getApplicationLimitCheck } from '@/lib/data/queue'
+import { isActiveApplicationStatus } from '@/lib/queue/limits'
+import { withdrawApplicationAction } from './actions'
 import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   submitted: 'Skickad',
   reviewing: 'Granskas',
   shortlisted: 'Shortlistad',
   offered: 'Erbjuden',
   rejected: 'Avslagen',
   withdrawn: 'Återtagen',
+  signed: 'Kontrakt signerat',
+  draft: 'Utkast',
+  received: 'Mottagen',
+  qualified: 'Kvalificerad',
+  reserve: 'Reserv',
+  viewing: 'Visning',
 }
 
 function competitionLabel(count: number) {
@@ -22,8 +32,8 @@ function competitionLabel(count: number) {
 }
 
 export default async function DashboardApplicationsPage() {
-  const applications = await getUserApplications()
-  const active = applications.filter((item) => ['submitted', 'reviewing', 'shortlisted', 'offered'].includes(item.status)).length
+  const [applications, { supabase, user }] = await Promise.all([getUserApplications(), requireSignedInUser()])
+  const limitCheck = await getApplicationLimitCheck(supabase, user.id)
   const totalApplicants = applications.reduce((sum, item) => sum + (item.applicantsCountForListing ?? 1), 0)
   const averageCompetition = applications.length ? Math.round(totalApplicants / applications.length) : 0
 
@@ -40,7 +50,15 @@ export default async function DashboardApplicationsPage() {
         </Card>
         <Card className="p-5">
           <div className="text-sm text-[#6b7280]">Aktiva ansökningar</div>
-          <div className="mt-2 text-3xl font-semibold text-[#111827]">{active}</div>
+          <div className="mt-2 text-3xl font-semibold text-[#111827]">
+            {limitCheck.activeCount}
+            <span className="text-lg font-medium text-[#6b7280]"> / {limitCheck.limit}</span>
+          </div>
+          <p className="mt-2 text-xs text-[#6b7280]">
+            {limitCheck.canApply
+              ? `${limitCheck.remaining} plats${limitCheck.remaining === 1 ? '' : 'er'} kvar.`
+              : 'Gränsen är nådd — återkalla en ansökan för att frigöra en plats.'}
+          </p>
         </Card>
         <Card className="p-5">
           <div className="text-sm text-[#6b7280]">Snitt sökande</div>
@@ -69,7 +87,7 @@ export default async function DashboardApplicationsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2 md:justify-end">
                     <div className="rounded-full bg-[#eef2ff] px-4 py-2 text-sm font-semibold text-[#243b8f]">
-                      {statusLabels[application.status]}
+                      {statusLabels[application.status] ?? application.status}
                     </div>
                     <div className="rounded-full bg-[#f7f8fc] px-4 py-2 text-sm font-semibold text-[#111827]">
                       {applicantsCount} sökande
@@ -101,10 +119,22 @@ export default async function DashboardApplicationsPage() {
                   <div className="mt-6 rounded-2xl border border-[#e8ebf3] p-4 text-sm leading-7 text-[#6b7280]">{application.coverLetter}</div>
                 ) : null}
 
-                <div className="mt-6">
+                <div className="mt-6 flex flex-wrap items-center gap-4">
                   <Link href={`/listing/${application.listing.slug}`} className="text-sm font-semibold text-[#5b3df5]">
                     Visa objekt igen
                   </Link>
+                  {isActiveApplicationStatus(application.status) ? (
+                    <form action={withdrawApplicationAction}>
+                      <input type="hidden" name="applicationId" value={application.id} />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        className="h-9 border border-[#fecaca] px-4 text-xs !text-[#b91c1c]"
+                      >
+                        Återkalla ansökan
+                      </Button>
+                    </form>
+                  ) : null}
                 </div>
               </Card>
             )

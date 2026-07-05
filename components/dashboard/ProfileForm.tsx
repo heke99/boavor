@@ -24,6 +24,26 @@ const INVITE_STATUS_LABELS: Record<string, string> = {
   declined: 'Tackade nej',
 }
 
+export type QueueLedgerEntryView = {
+  id: string
+  eventType: string
+  pointsDelta: number
+  balanceAfter: number
+  note: string | null
+  createdAt: string
+}
+
+const LEDGER_EVENT_LABELS: Record<string, string> = {
+  enrolled: 'Gick med i kön',
+  daily_accrual: 'Daglig poäng',
+  monthly_accrual: 'Poänguppdatering',
+  manual_adjustment: 'Manuell justering',
+  paused: 'Pausad',
+  resumed: 'Återupptagen',
+  cancelled: 'Avslutad',
+  reset: 'Nollställd',
+}
+
 function formatDate(value: string | null) {
   if (!value) return '—'
   try {
@@ -33,7 +53,13 @@ function formatDate(value: string | null) {
   }
 }
 
-export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
+export function ProfileForm({
+  profile,
+  queueLedger = [],
+}: {
+  profile: DashboardProfileItem
+  queueLedger?: QueueLedgerEntryView[]
+}) {
   const queue = profile.queueMembership
   const queueActive = queue?.status === 'active'
   const company = profile.companies[0] ?? null
@@ -343,9 +369,11 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
 
       <div className="space-y-6">
         <Card className="p-6">
-          <div className="inline-flex rounded-full bg-[var(--secondary-soft)] px-3 py-1 text-xs font-semibold text-[var(--secondary)]">Köpoäng</div>
-          <h2 className="mt-4 text-2xl font-semibold">Bovaro Kö+</h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Köpoäng fungerar som ett extra incitament. Hyresvärdar kan se köpoäng och kötid, men de måste inte välja efter poäng.</p>
+          <div className="inline-flex rounded-full bg-[var(--secondary-soft)] px-3 py-1 text-xs font-semibold text-[var(--secondary)]">Bostadskö</div>
+          <h2 className="mt-4 text-2xl font-semibold">Bovaro bostadskö</h2>
+          <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+            Kön är kostnadsfri. Du samlar 1 köpoäng per dag i kön, och poängen följer med i dina ansökningar.
+          </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-black/8 p-4">
@@ -353,39 +381,52 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <div className="mt-2 text-3xl font-semibold">{queue?.currentPoints ?? 0}</div>
             </div>
             <div className="rounded-2xl border border-black/8 p-4">
-              <div className="text-sm text-[var(--muted)]">Månader i kö</div>
-              <div className="mt-2 text-3xl font-semibold">{queue?.monthsInQueue ?? 0}</div>
-            </div>
-            <div className="rounded-2xl border border-black/8 p-4">
               <div className="text-sm text-[var(--muted)]">Köstart</div>
               <div className="mt-2 text-lg font-semibold">{formatDate(queue?.joinedQueueAt ?? null)}</div>
             </div>
-            <div className="rounded-2xl border border-black/8 p-4">
+            <div className="rounded-2xl border border-black/8 p-4 sm:col-span-2">
               <div className="text-sm text-[var(--muted)]">Status</div>
               <div className="mt-2 text-lg font-semibold capitalize">{queue?.status ?? 'Inte aktiv'}</div>
-              <div className="mt-1 text-xs text-[var(--muted)]">Subscription: {queue?.subscriptionStatus ?? 'inte startad'}</div>
             </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl bg-black/5 p-4 text-sm text-[var(--muted)]">
-            Nästa betalperiod: <span className="font-semibold text-[var(--foreground)]">{formatDate(queue?.nextBillingAt ?? null)}</span>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
             {!queue ? (
               <form action={startQueueMembershipAction}>
-                <Button>Starta Kö+</Button>
+                <Button>Gå med i kön</Button>
               </form>
             ) : queueActive ? (
               <form action={pauseQueueMembershipAction}>
-                <Button variant="ghost" className="border border-black/8">Pausa Kö+</Button>
+                <Button variant="ghost" className="border border-black/8">Pausa köplats</Button>
               </form>
             ) : (
               <form action={resumeQueueMembershipAction}>
-                <Button>Återaktivera Kö+</Button>
+                <Button>Återaktivera köplats</Button>
               </form>
             )}
           </div>
+
+          {queueLedger.length > 0 ? (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">Köhistorik</h3>
+              <ul className="mt-3 space-y-2">
+                {queueLedger.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/[0.03] px-4 py-2.5 text-sm">
+                    <div>
+                      <span className="font-semibold">{LEDGER_EVENT_LABELS[entry.eventType] ?? entry.eventType}</span>
+                      <span className="ml-2 text-xs text-[var(--muted)]">{formatDate(entry.createdAt)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={entry.pointsDelta >= 0 ? 'font-semibold text-[#15803d]' : 'font-semibold text-[#b91c1c]'}>
+                        {entry.pointsDelta >= 0 ? '+' : ''}{entry.pointsDelta}
+                      </span>
+                      <span className="ml-2 text-xs text-[var(--muted)]">saldo {entry.balanceAfter}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </Card>
 
         <Card className="p-6">
