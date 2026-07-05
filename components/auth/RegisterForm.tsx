@@ -126,7 +126,7 @@ export function RegisterForm() {
     const organizationNumber = String(formData.get('organizationNumber') ?? '').trim()
     const companySlug = companyName ? `${createSlug(companyName)}-${Date.now().toString(36)}` : null
 
-    const onboardingPath = isCompany ? '/dashboard/listings?onboarding=1' : '/dashboard/profile?onboarding=1'
+    const onboardingPath = isCompany ? '/landlord/onboarding' : '/dashboard/profile?onboarding=1'
 
     const { error } = await supabase.auth.signUp({
       email,

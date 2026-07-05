@@ -167,6 +167,47 @@ export type Database = {
           },
         ]
       }
+      buildings: {
+        Row: {
+          build_year: number | null
+          created_at: string
+          floors: number | null
+          has_elevator: boolean
+          id: string
+          name: string
+          property_id: string
+          street: string | null
+        }
+        Insert: {
+          build_year?: number | null
+          created_at?: string
+          floors?: number | null
+          has_elevator?: boolean
+          id?: string
+          name: string
+          property_id: string
+          street?: string | null
+        }
+        Update: {
+          build_year?: number | null
+          created_at?: string
+          floors?: number | null
+          has_elevator?: boolean
+          id?: string
+          name?: string
+          property_id?: string
+          street?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buildings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_applicants: {
         Row: {
           accepted_at: string | null
@@ -220,18 +261,24 @@ export type Database = {
       }
       companies: {
         Row: {
+          billing_email: string | null
           business_purpose: string
           city: string | null
           company_type: string
           created_at: string
           created_by: string | null
+          default_selection_method: string
           email: string | null
           id: string
+          invoice_reference: string | null
           legal_form: string
+          logo_url: string | null
           name: string
+          notification_emails: string[]
           org_number: string | null
           organization_number: string | null
           phone: string | null
+          public_description: string | null
           slug: string
           updated_at: string
           verification_note: string | null
@@ -241,18 +288,24 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          billing_email?: string | null
           business_purpose?: string
           city?: string | null
           company_type?: string
           created_at?: string
           created_by?: string | null
+          default_selection_method?: string
           email?: string | null
           id?: string
+          invoice_reference?: string | null
           legal_form?: string
+          logo_url?: string | null
           name: string
+          notification_emails?: string[]
           org_number?: string | null
           organization_number?: string | null
           phone?: string | null
+          public_description?: string | null
           slug: string
           updated_at?: string
           verification_note?: string | null
@@ -262,18 +315,24 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          billing_email?: string | null
           business_purpose?: string
           city?: string | null
           company_type?: string
           created_at?: string
           created_by?: string | null
+          default_selection_method?: string
           email?: string | null
           id?: string
+          invoice_reference?: string | null
           legal_form?: string
+          logo_url?: string | null
           name?: string
+          notification_emails?: string[]
           org_number?: string | null
           organization_number?: string | null
           phone?: string | null
+          public_description?: string | null
           slug?: string
           updated_at?: string
           verification_note?: string | null
@@ -284,12 +343,60 @@ export type Database = {
         }
         Relationships: []
       }
+      company_member_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          email: string
+          id: string
+          invite_token: string
+          invited_by: string | null
+          status: string
+          team_role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invite_token?: string
+          invited_by?: string | null
+          status?: string
+          team_role?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_token?: string
+          invited_by?: string | null
+          status?: string
+          team_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_member_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_members: {
         Row: {
           company_id: string
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          team_role: string
           title: string | null
           user_id: string
         }
@@ -298,6 +405,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          team_role?: string
           title?: string | null
           user_id: string
         }
@@ -306,6 +414,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          team_role?: string
           title?: string | null
           user_id?: string
         }
@@ -928,6 +1037,41 @@ export type Database = {
           },
         ]
       }
+      listing_publications: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          note: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_publications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           access_24_7: boolean
@@ -993,6 +1137,7 @@ export type Database = {
           property_type: Database["public"]["Enums"]["property_type"]
           published_at: string | null
           rooms: number | null
+          scheduled_publish_at: string | null
           selection_method: string
           show_applicant_count: boolean
           slug: string
@@ -1000,6 +1145,7 @@ export type Database = {
           storage_type: Database["public"]["Enums"]["storage_type"] | null
           street: string | null
           title: string
+          unit_id: string | null
           units_count: number | null
           updated_at: string
           vacancy_rate: number | null
@@ -1075,6 +1221,7 @@ export type Database = {
           property_type: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          scheduled_publish_at?: string | null
           selection_method?: string
           show_applicant_count?: boolean
           slug: string
@@ -1082,6 +1229,7 @@ export type Database = {
           storage_type?: Database["public"]["Enums"]["storage_type"] | null
           street?: string | null
           title: string
+          unit_id?: string | null
           units_count?: number | null
           updated_at?: string
           vacancy_rate?: number | null
@@ -1157,6 +1305,7 @@ export type Database = {
           property_type?: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          scheduled_publish_at?: string | null
           selection_method?: string
           show_applicant_count?: boolean
           slug?: string
@@ -1164,6 +1313,7 @@ export type Database = {
           storage_type?: Database["public"]["Enums"]["storage_type"] | null
           street?: string | null
           title?: string
+          unit_id?: string | null
           units_count?: number | null
           updated_at?: string
           vacancy_rate?: number | null
@@ -1177,6 +1327,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -1482,6 +1639,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      properties: {
+        Row: {
+          area_name: string | null
+          city: string
+          company_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_user_id: string | null
+          street: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          area_name?: string | null
+          city: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_user_id?: string | null
+          street?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          area_name?: string | null
+          city?: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_user_id?: string | null
+          street?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       queue_memberships: {
         Row: {
@@ -2106,6 +2313,142 @@ export type Database = {
         }
         Relationships: []
       }
+      unit_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_url: string
+          id: string
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string
+          file_name: string
+          file_url: string
+          id?: string
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_documents_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_media: {
+        Row: {
+          created_at: string
+          id: string
+          media_type: string
+          media_url: string
+          position: number
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url: string
+          position?: number
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          position?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_media_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          area_sqm: number | null
+          base_rent: number | null
+          building_id: string | null
+          created_at: string
+          floor: string | null
+          has_accessibility: boolean
+          has_balcony: boolean
+          id: string
+          note: string | null
+          property_id: string
+          rooms: number | null
+          status: string
+          unit_number: string
+          updated_at: string
+        }
+        Insert: {
+          area_sqm?: number | null
+          base_rent?: number | null
+          building_id?: string | null
+          created_at?: string
+          floor?: string | null
+          has_accessibility?: boolean
+          has_balcony?: boolean
+          id?: string
+          note?: string | null
+          property_id: string
+          rooms?: number | null
+          status?: string
+          unit_number: string
+          updated_at?: string
+        }
+        Update: {
+          area_sqm?: number | null
+          base_rent?: number | null
+          building_id?: string | null
+          created_at?: string
+          floor?: string | null
+          has_accessibility?: boolean
+          has_balcony?: boolean
+          id?: string
+          note?: string | null
+          property_id?: string
+          rooms?: number | null
+          status?: string
+          unit_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_consents: {
         Row: {
           consent_type: string
@@ -2297,6 +2640,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_company_invite: { Args: { p_token: string }; Returns: Json }
       admin_adjust_queue_points: {
         Args: {
           p_delta: number
@@ -2380,6 +2724,10 @@ export type Database = {
         Args: { target_listing_id: string }
         Returns: boolean
       }
+      current_user_can_manage_property: {
+        Args: { target_property_id: string }
+        Returns: boolean
+      }
       current_user_company_ids: { Args: never; Returns: string[] }
       current_user_is_admin: { Args: never; Returns: boolean }
       current_user_is_super_admin: { Args: never; Returns: boolean }
@@ -2412,6 +2760,14 @@ export type Database = {
           invite_status: string
           inviter_name: string
           relationship: string
+        }[]
+      }
+      get_company_invite: {
+        Args: { p_token: string }
+        Returns: {
+          company_name: string
+          id: string
+          team_role: string
         }[]
       }
       household_queue_points: {

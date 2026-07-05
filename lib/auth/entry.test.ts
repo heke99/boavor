@@ -30,12 +30,12 @@ describe('getPostLoginPath', () => {
     expect(getPostLoginPath({ role: 'super_admin', accountType: 'private', onboardingCompleted: false })).toBe('/admin')
   })
 
-  it('sends landlords to the listings workspace with onboarding hint', () => {
+  it('sends landlords to the landlord workspace with onboarding for new accounts', () => {
     expect(getPostLoginPath({ role: 'company_admin', accountType: 'company', onboardingCompleted: true })).toBe(
-      '/dashboard/listings',
+      '/landlord',
     )
     expect(getPostLoginPath({ role: 'company_admin', accountType: 'company', onboardingCompleted: false })).toBe(
-      '/dashboard/listings?onboarding=1',
+      '/landlord/onboarding',
     )
   })
 

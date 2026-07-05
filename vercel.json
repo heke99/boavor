@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/saved-search-matching",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/publish-scheduled-listings",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

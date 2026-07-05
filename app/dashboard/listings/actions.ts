@@ -2,6 +2,7 @@
 
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { requireDashboardAccess, canCreateListing, canManageApplication, canManageInquiry, canManageListing, isAdminRole } from '@/lib/auth/permissions'
 import { canTransition } from '@/lib/applications/status-machine'
@@ -465,8 +466,94 @@ export async function updateListingStatusAction(formData: FormData) {
     payload: { previous_status: listing.status, new_status: status },
   })
 
+  // Publication audit trail.
+  const publicationAction =
+    status === 'published' ? 'published' : status === 'paused' ? 'paused' : status === 'archived' ? 'archived' : status === 'rented' ? 'rented' : 'unpublished'
+  await supabase.from('listing_publications').insert({
+    listing_id: listingId,
+    action: publicationAction,
+    actor_user_id: user.id,
+    note: `Från ${listing.status} till ${status}`,
+  })
+
   revalidatePath('/dashboard/listings')
   revalidatePath('/listings')
+}
+
+/** Duplicates a listing as a new draft (images/features copied). */
+export async function duplicateListingAction(formData: FormData) {
+  const { supabase, user } = await requireDashboardAccess()
+  const listingId = String(formData.get('listingId') ?? '')
+  if (!listingId) return
+
+  const canManage = await userCanManageListing(supabase, user.id, listingId)
+  if (!canManage) return
+
+  const { data: source } = await supabase.from('listings').select('*').eq('id', listingId).maybeSingle()
+  if (!source) return
+
+  const copy: Record<string, unknown> = { ...source }
+  delete copy.id
+  delete copy.created_at
+  delete copy.updated_at
+  copy.title = `${source.title} (kopia)`
+  copy.slug = `${source.slug}-kopia-${Date.now().toString(36)}`
+  copy.status = 'draft'
+  copy.published_at = null
+  copy.scheduled_publish_at = null
+  copy.created_by = user.id
+
+  const { data: created, error } = await supabase
+    .from('listings')
+    .insert(copy as never)
+    .select('id')
+    .single()
+
+  if (error || !created) {
+    console.error('Failed to duplicate listing', error)
+    return
+  }
+
+  const [{ data: images }, { data: features }] = await Promise.all([
+    supabase.from('listing_images').select('image_url, alt_text, position, is_cover').eq('listing_id', listingId),
+    supabase.from('listing_features').select('feature_key, feature_label').eq('listing_id', listingId),
+  ])
+
+  if (images?.length) {
+    await supabase.from('listing_images').insert(images.map((image) => ({ ...image, listing_id: created.id })))
+  }
+  if (features?.length) {
+    await supabase.from('listing_features').insert(features.map((feature) => ({ ...feature, listing_id: created.id })))
+  }
+
+  redirect(`/dashboard/listings/${created.id}/edit`)
+}
+
+/** Schedules a listing for future publication (activated by the cron job). */
+export async function schedulePublishAction(formData: FormData) {
+  const { supabase, user } = await requireDashboardAccess()
+  const listingId = String(formData.get('listingId') ?? '')
+  const publishAt = String(formData.get('publishAt') ?? '').trim()
+  if (!listingId) return
+
+  const canManage = await userCanManageListing(supabase, user.id, listingId)
+  if (!canManage) return
+
+  const scheduledAt = publishAt ? new Date(publishAt).toISOString() : null
+
+  await supabase.from('listings').update({ scheduled_publish_at: scheduledAt }).eq('id', listingId)
+
+  if (scheduledAt) {
+    await supabase.from('listing_publications').insert({
+      listing_id: listingId,
+      action: 'scheduled',
+      actor_user_id: user.id,
+      note: `Schemalagd publicering ${scheduledAt}`,
+    })
+  }
+
+  revalidatePath('/landlord/listings')
+  revalidatePath('/dashboard/listings')
 }
 
 

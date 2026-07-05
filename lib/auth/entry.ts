@@ -26,7 +26,7 @@ export function getPostLoginPath(profile: EntryProfile, explicitNext?: string | 
   if (profile.role === 'admin' || profile.role === 'super_admin') return '/admin'
 
   if (isLandlordEntry(profile)) {
-    return profile.onboardingCompleted ? '/dashboard/listings' : '/dashboard/listings?onboarding=1'
+    return profile.onboardingCompleted ? '/landlord' : '/landlord/onboarding'
   }
 
   return profile.onboardingCompleted ? '/dashboard' : '/dashboard/profile?onboarding=1'
