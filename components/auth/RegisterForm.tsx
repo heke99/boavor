@@ -22,11 +22,6 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
-function validateSwedishPersonalIdentityNumber(value: string) {
-  const digits = onlyDigits(value)
-  return digits.length === 10 || digits.length === 12
-}
-
 function validateOrganizationNumber(value: string) {
   const digits = onlyDigits(value)
   return digits.length === 10
@@ -103,17 +98,9 @@ export function RegisterForm() {
     } else {
       const firstName = String(formData.get('firstName') ?? '').trim()
       const lastName = String(formData.get('lastName') ?? '').trim()
-      const personalIdentityNumber = String(formData.get('personalIdentityNumber') ?? '').trim()
-      const personalIdentityConsent = formData.get('personalIdentityConsent') === 'on'
 
       if (!firstName) nextErrors.firstName = 'Ange förnamn.'
       if (!lastName) nextErrors.lastName = 'Ange efternamn.'
-      if (!validateSwedishPersonalIdentityNumber(personalIdentityNumber)) {
-        nextErrors.personalIdentityNumber = 'Ange personnummer med 10 eller 12 siffror.'
-      }
-      if (!personalIdentityConsent) {
-        nextErrors.personalIdentityConsent = 'Du måste godkänna behandling av personnummer.'
-      }
     }
 
     setErrors(nextErrors)
@@ -153,8 +140,6 @@ export function RegisterForm() {
           phone,
           city: String(formData.get('city') ?? '').trim(),
           preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both'),
-          personal_identity_number: isCompany ? null : String(formData.get('personalIdentityNumber') ?? '').trim(),
-          personal_identity_consent: !isCompany,
           marketing_consent: formData.get('marketingConsent') === 'on',
           terms_accepted: true,
           privacy_accepted: true,
@@ -350,14 +335,6 @@ export function RegisterForm() {
                 <ErrorText errors={errors} id="lastName" />
               </div>
               <div>
-                <label className={labelClass}>Personnummer</label>
-                <Input name="personalIdentityNumber" placeholder="ÅÅÅÅMMDD-XXXX" className={inputClass} />
-                <ErrorText errors={errors} id="personalIdentityNumber" />
-                <p className="mt-2 text-xs leading-5 text-[#6b7280]">
-                  Används för identifiering och bostadsansökningar. Visas inte publikt.
-                </p>
-              </div>
-              <div>
                 <label className={labelClass}>Telefonnummer</label>
                 <Input name="phone" autoComplete="tel" placeholder="070-000 00 00" className={inputClass} />
                 <ErrorText errors={errors} id="phone" />
@@ -409,16 +386,10 @@ export function RegisterForm() {
             <ErrorText errors={errors} id="privacyAccepted" />
 
             {!isCompany ? (
-              <>
-                <label className="flex gap-3">
-                  <input name="personalIdentityConsent" type="checkbox" className="mt-1 h-4 w-4 accent-[#5b3df5]" />
-                  <span>
-                    Jag samtycker till att Bovaro behandlar mitt personnummer för identifiering, profilhantering och
-                    bostadsansökningar.
-                  </span>
-                </label>
-                <ErrorText errors={errors} id="personalIdentityConsent" />
-              </>
+              <p className="rounded-2xl bg-[#eef2ff] px-4 py-3 text-xs leading-5 text-[#3730a3]">
+                Identitetsverifiering med personnummer görs separat efter registreringen och krävs först när du ska
+                skicka en bostadsansökan.
+              </p>
             ) : (
               <>
                 <label className="flex gap-3">

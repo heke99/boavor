@@ -1,10 +1,13 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Fingerprint } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { submitRentalApplication } from './actions'
 import { getApplyPageData } from '@/lib/data/rental-applications'
+import { getIdentityState } from '@/lib/data/identity'
 import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -16,7 +19,7 @@ type Props = {
 
 export default async function ApplyPage({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
-  const { listing, profile } = await getApplyPageData(slug)
+  const [{ listing, profile }, identity] = await Promise.all([getApplyPageData(slug), getIdentityState()])
 
   if (listing.listingType !== 'rent') redirect(`/listing/${slug}`)
 
@@ -25,7 +28,54 @@ export default async function ApplyPage({ params, searchParams }: Props) {
     ? 'Du har skickat flera ansökningar nyligen. Vänta en stund och försök igen.'
     : errorCode === 'failed'
       ? 'Ansökan kunde inte skickas just nu.'
-      : null
+      : errorCode === 'identity_required'
+        ? 'Du behöver verifiera din identitet innan du kan ansöka.'
+        : errorCode === 'underage'
+          ? 'Du måste vara minst 18 år för att kunna ansöka om bostad.'
+          : errorCode === 'consent_required'
+            ? 'Du måste godkänna att dina uppgifter delas med hyresvärden.'
+            : null
+
+  if (!identity.isVerified || !identity.isAdult) {
+    return (
+      <DashboardShell
+        activePath="/dashboard/applications"
+        title="Ansök om bostad"
+        description="Innan du kan skicka en ansökan behöver din identitet vara verifierad."
+      >
+        <Card className="p-8">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eef2ff] text-[#5b3df5]">
+              <Fingerprint size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold text-[#111827]">
+                {identity.isVerified ? 'Du måste vara minst 18 år' : 'Verifiera din identitet först'}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-[#6b7280]">
+                {identity.isVerified
+                  ? 'Enligt vår ålderskontroll är du under 18 år. Bostadsansökningar kräver att du är myndig.'
+                  : 'För att skydda både dig och hyresvärden kräver Bovaro att alla sökande verifierar sin identitet innan de skickar ansökningar. Verifieringen tar bara en minut.'}
+              </p>
+              {!identity.isVerified ? (
+                <div className="mt-6">
+                  <Button href="/dashboard/identity">
+                    <Fingerprint size={16} className="mr-2" />
+                    Verifiera identitet
+                  </Button>
+                </div>
+              ) : null}
+              <p className="mt-4 text-sm text-[#6b7280]">
+                <Link href={`/listing/${slug}`} className="font-semibold text-[#5b3df5] hover:underline">
+                  Tillbaka till annonsen
+                </Link>
+              </p>
+            </div>
+          </div>
+        </Card>
+      </DashboardShell>
+    )
+  }
 
   return (
     <DashboardShell
@@ -142,6 +192,13 @@ export default async function ApplyPage({ params, searchParams }: Props) {
               placeholder="Beskriv varför just du passar för bostaden, önskat tillträde och annan relevant information."
               className="mt-4 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
             />
+            <label className="mt-6 flex gap-3 rounded-2xl border border-black/8 bg-[#f8fafc] p-4 text-sm leading-6">
+              <input type="checkbox" name="dataSharingConsent" className="mt-1 h-4 w-4 accent-[#5b3df5]" />
+              <span>
+                Jag godkänner att mina ansökningsuppgifter och valda dokument delas med hyresvärden för den här
+                bostaden.
+              </span>
+            </label>
             <div className="mt-6 flex items-center justify-between gap-4">
               <p className="max-w-xl text-sm text-[var(--muted)]">När du skickar ansökan sparas en snapshot av din profil, dina valda dokument, medsökande och köpoäng vid ansökningstillfället.</p>
               <Button type="submit">Skicka ansökan</Button>

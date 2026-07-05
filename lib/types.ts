@@ -230,7 +230,7 @@ export type DashboardProfileItem = {
   phone: string
   role: AppRole
   accountType?: AccountType
-  personalIdentityNumber?: string | null
+  identityVerifiedAt?: string | null
   preferredListingIntent?: PreferredListingIntent
   termsAcceptedAt?: string | null
   privacyAcceptedAt?: string | null
@@ -256,7 +256,6 @@ export type ProfileFormValues = {
   phone: string
   role: AppRole
   accountType?: AccountType
-  personalIdentityNumber?: string | null
   preferredListingIntent?: PreferredListingIntent
   termsAcceptedAt?: string | null
   privacyAcceptedAt?: string | null

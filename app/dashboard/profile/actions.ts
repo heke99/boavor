@@ -50,7 +50,6 @@ export async function saveProfileAction(formData: FormData) {
     city: String(formData.get('city') ?? '').trim(),
     role,
     account_type: String(formData.get('accountType') ?? 'private') as AccountType,
-    personal_identity_number: String(formData.get('personalIdentityNumber') ?? '').trim() || null,
     preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both') as PreferredListingIntent,
     marketing_consent: formData.get('marketingConsent') === 'on',
     household_size: Number(formData.get('householdSize') ?? 1) || null,

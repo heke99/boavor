@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getApplyPageData, buildApplicantFullName } from '@/lib/data/rental-applications'
+import { requireVerifiedAdult } from '@/lib/data/identity'
+import { recordConsent } from '@/lib/consents/consents'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 export async function submitRentalApplication(formData: FormData) {
@@ -17,9 +19,23 @@ export async function submitRentalApplication(formData: FormData) {
   const employmentType = String(formData.get('employmentType') ?? '').trim() || null
   const pets = formData.get('pets') === 'on'
   const smoking = formData.get('smoking') === 'on'
+  const dataSharingConsent = formData.get('dataSharingConsent') === 'on'
 
   const { supabase, user } = await (await import('@/lib/data/rental-applications')).requireSignedInUser()
   const { listing, profile } = await getApplyPageData(slug)
+
+  // Identity gate: applying requires a verified identity and age >= 18.
+  const identity = await requireVerifiedAdult(user.id)
+  if (!identity.verified) {
+    redirect(`/listing/${slug}/apply?error=identity_required`)
+  }
+  if (!identity.adult) {
+    redirect(`/listing/${slug}/apply?error=underage`)
+  }
+
+  if (!dataSharingConsent) {
+    redirect(`/listing/${slug}/apply?error=consent_required`)
+  }
 
   const allowed = await checkRateLimit(supabase, {
     scope: 'rental_application',
@@ -93,6 +109,11 @@ export async function submitRentalApplication(formData: FormData) {
   if (error || !created) {
     console.error('Failed to create rental application', error)
     redirect(`/listing/${slug}/apply?error=failed`)
+  }
+
+  await recordConsent(supabase, { userId: user.id, consentType: 'application_data_sharing', source: 'apply' })
+  if (selectedDocuments.length > 0) {
+    await recordConsent(supabase, { userId: user.id, consentType: 'document_sharing', source: 'apply' })
   }
 
   if (selectedCoApplicants.length > 0) {

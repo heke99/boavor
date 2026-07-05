@@ -17,7 +17,7 @@ type ProfileRow = {
   phone: string | null
   role: AppRole
   account_type?: DashboardProfileItem['accountType'] | null
-  personal_identity_number?: string | null
+  identity_verified_at?: string | null
   preferred_listing_intent?: DashboardProfileItem['preferredListingIntent'] | null
   terms_accepted_at?: string | null
   privacy_accepted_at?: string | null
@@ -171,7 +171,7 @@ export async function getDashboardProfile() {
   const { data: profileRow } = await supabase
     .from('profiles')
     .select(
-      'id, first_name, last_name, phone, role, account_type, personal_identity_number, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
+      'id, first_name, last_name, phone, role, account_type, identity_verified_at, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
     )
     .eq('id', user.id)
     .maybeSingle<ProfileRow>()
@@ -216,7 +216,7 @@ export async function getDashboardProfile() {
     phone: profileRow?.phone ?? '',
     role: profileRow?.role ?? 'seeker',
     accountType: profileRow?.account_type ?? 'private',
-    personalIdentityNumber: profileRow?.personal_identity_number ?? null,
+    identityVerifiedAt: profileRow?.identity_verified_at ?? null,
     preferredListingIntent: profileRow?.preferred_listing_intent ?? 'both',
     termsAcceptedAt: profileRow?.terms_accepted_at ?? null,
     privacyAcceptedAt: profileRow?.privacy_accepted_at ?? null,

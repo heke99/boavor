@@ -50,7 +50,6 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
                 <option value="private">Privatperson</option>
                 <option value="company">Företag</option>
               </Select>
-              <Input name="personalIdentityNumber" placeholder="Personnummer" defaultValue={profile.personalIdentityNumber ?? ''} />
               <Select name="preferredListingIntent" defaultValue={profile.preferredListingIntent ?? 'both'}>
                 <option value="rent">Främst hyra</option>
                 <option value="buy">Främst köpa</option>

@@ -304,6 +304,92 @@ export type Database = {
           },
         ]
       }
+      identity_verification_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          user_id: string
+          verification_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          user_id: string
+          verification_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          user_id?: string
+          verification_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identity_verification_events_verification_id_fkey"
+            columns: ["verification_id"]
+            isOneToOne: false
+            referencedRelation: "identity_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identity_verifications: {
+        Row: {
+          age_verified: boolean | null
+          birth_date: string | null
+          created_at: string
+          failure_reason: string | null
+          full_name_from_provider: string | null
+          id: string
+          metadata: Json
+          personal_identity_number_hash: string | null
+          provider: string
+          provider_session_id: string | null
+          status: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          age_verified?: boolean | null
+          birth_date?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          full_name_from_provider?: string | null
+          id?: string
+          metadata?: Json
+          personal_identity_number_hash?: string | null
+          provider: string
+          provider_session_id?: string | null
+          status?: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          age_verified?: boolean | null
+          birth_date?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          full_name_from_provider?: string | null
+          id?: string
+          metadata?: Json
+          personal_identity_number_hash?: string | null
+          provider?: string
+          provider_session_id?: string | null
+          status?: Database["public"]["Enums"]["identity_verification_status"]
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       legal_acceptances: {
         Row: {
           accepted_at: string
@@ -938,6 +1024,7 @@ export type Database = {
           has_pets: boolean
           household_size: number | null
           id: string
+          identity_verified_at: string | null
           last_name: string | null
           marketing_consent: boolean
           monthly_income: number | null
@@ -964,6 +1051,7 @@ export type Database = {
           has_pets?: boolean
           household_size?: number | null
           id: string
+          identity_verified_at?: string | null
           last_name?: string | null
           marketing_consent?: boolean
           monthly_income?: number | null
@@ -990,6 +1078,7 @@ export type Database = {
           has_pets?: boolean
           household_size?: number | null
           id?: string
+          identity_verified_at?: string | null
           last_name?: string | null
           marketing_consent?: boolean
           monthly_income?: number | null
@@ -1571,6 +1660,78 @@ export type Database = {
         }
         Relationships: []
       }
+      user_consents: {
+        Row: {
+          consent_type: string
+          consent_version: string
+          granted: boolean
+          granted_at: string
+          id: string
+          metadata: Json
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          consent_type: string
+          consent_version: string
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          consent_type?: string
+          consent_version?: string
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_risk_flags: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          flag_type: string
+          id: string
+          metadata: Json
+          note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          flag_type: string
+          id?: string
+          metadata?: Json
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          flag_type?: string
+          id?: string
+          metadata?: Json
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           cancel_at_period_end: boolean
@@ -1690,6 +1851,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_identity_overview: {
+        Args: never
+        Returns: {
+          age_verified: boolean
+          created_at: string
+          failure_reason: string
+          id: string
+          provider: string
+          status: Database["public"]["Enums"]["identity_verification_status"]
+          user_id: string
+          verified_at: string
+        }[]
+      }
       admin_user_overview: {
         Args: never
         Returns: {
@@ -1737,6 +1911,19 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      finalize_identity_verification: {
+        Args: {
+          p_age_verified?: boolean
+          p_birth_date?: string
+          p_failure_reason?: string
+          p_full_name?: string
+          p_metadata?: Json
+          p_pin_hash?: string
+          p_status: Database["public"]["Enums"]["identity_verification_status"]
+          p_verification_id: string
+        }
+        Returns: Json
+      }
       storage_bucket_exists: { Args: { bucket_name: string }; Returns: boolean }
     }
     Enums: {
@@ -1758,6 +1945,12 @@ export type Database = {
         | "clinic"
         | "workshop"
         | "other"
+      identity_verification_status:
+        | "pending"
+        | "verified"
+        | "failed"
+        | "expired"
+        | "cancelled"
       inquiry_status:
         | "new"
         | "contacted"
@@ -2008,6 +2201,13 @@ export const Constants = {
         "clinic",
         "workshop",
         "other",
+      ],
+      identity_verification_status: [
+        "pending",
+        "verified",
+        "failed",
+        "expired",
+        "cancelled",
       ],
       inquiry_status: [
         "new",

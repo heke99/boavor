@@ -10,7 +10,7 @@ export type ProfileScoreBreakdown = {
 export function calculateProfileScore(profile: DashboardProfileItem): ProfileScoreBreakdown {
   const checks: Array<{ ok: boolean; label: string; weight: number }> = [
     { ok: Boolean(profile.firstName && profile.lastName), label: 'Namn', weight: 10 },
-    { ok: Boolean(profile.personalIdentityNumber), label: 'Personnummer', weight: 10 },
+    { ok: Boolean(profile.identityVerifiedAt), label: 'Identitet verifierad', weight: 10 },
     { ok: Boolean(profile.phone), label: 'Telefonnummer', weight: 8 },
     { ok: Boolean(profile.city), label: 'Stad', weight: 6 },
     { ok: Boolean(profile.householdSize), label: 'Hushållsstorlek', weight: 8 },

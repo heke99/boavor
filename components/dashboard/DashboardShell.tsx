@@ -2,6 +2,7 @@ import Link from 'next/link'
 import {
   Building2,
   FileText,
+  Fingerprint,
   Heart,
   Inbox,
   LayoutDashboard,
@@ -17,6 +18,7 @@ import { LogoutButton } from '@/components/auth/LogoutButton'
 const navItems = [
   { href: '/dashboard', label: 'Översikt', icon: LayoutDashboard },
   { href: '/dashboard/profile', label: 'Min profil', icon: UserCircle2 },
+  { href: '/dashboard/identity', label: 'Identitet', icon: Fingerprint },
   { href: '/dashboard/documents', label: 'Dokument', icon: WalletCards },
   { href: '/dashboard/applications', label: 'Ansökningar', icon: FileText },
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
