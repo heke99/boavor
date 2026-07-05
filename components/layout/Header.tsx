@@ -3,6 +3,7 @@ import { Building2, Home, LayoutDashboard, Search, ShieldCheck, Sparkles, UserCi
 import { Button } from '@/components/ui/Button'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { isModuleEnabled } from '@/lib/product/modules'
 import type { AppRole } from '@/lib/types'
 
 type HeaderSession = {
@@ -40,6 +41,7 @@ export async function Header() {
   const session = await getHeaderSession()
   const isLoggedIn = Boolean(session)
   const canAccessAdmin = isAdminRole(session?.role ?? null)
+  const showSale = isModuleEnabled('saleMarketplace')
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/70 bg-white/82 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-2xl">
@@ -53,7 +55,7 @@ export async function Header() {
               Bovaro
               <Sparkles size={13} className="text-[#5b3df5]" />
             </div>
-            <div className="text-xs text-[var(--muted)]">Bostäder, lokaler och leads</div>
+            <div className="text-xs text-[var(--muted)]">Hyresbostäder i första hand</div>
           </div>
         </Link>
 
@@ -61,12 +63,17 @@ export async function Header() {
           <Link href="/rent" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
             Hyra
           </Link>
-          <Link href="/buy" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
-            Till salu
+          <Link href="/bostadsko" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
+            Bostadskö
           </Link>
-          <Link href="/listings" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
-            Alla objekt
+          <Link href="/hyresvardar" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
+            Hyresvärdar
           </Link>
+          {showSale ? (
+            <Link href="/buy" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
+              Till salu
+            </Link>
+          ) : null}
           {isLoggedIn ? (
             <Link href="/dashboard" className="rounded-full px-4 py-2 transition hover:bg-[#f4f2ff] hover:text-[#4c31d8]">
               Dashboard

@@ -1,17 +1,17 @@
 export const siteConfig = {
   name: 'Bovaro',
   description:
-    'Bovaro är en svensk marknadsplats för hyra, bostäder till salu, lokaler, kontor, parkering, förråd, mark och fastighetsobjekt.',
+    'Bovaro är en svensk marknadsplats för förstahandsuthyrning med kostnadsfri bostadskö, verifierade profiler och moderna verktyg för hyresvärdar. Här finns även bostäder till salu och lokaler.',
   keywords: [
-    'bostäder',
+    'hyresbostäder',
+    'förstahandskontrakt',
+    'bostadskö',
     'hyra bostad',
+    'hyra lägenhet',
+    'hyresvärd',
     'bostäder till salu',
     'lägenheter',
-    'hus',
     'lokaler',
-    'kontor',
-    'kommersiella fastigheter',
-    'fastighetsobjekt',
     'bostadsmarknadsplats',
   ],
 }

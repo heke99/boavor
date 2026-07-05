@@ -22,39 +22,40 @@ export default async function HomePage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.18)] backdrop-blur-xl">
                 <Sparkles size={15} />
-                Ny smartare marknadsplats för bostäder och lokaler
+                Svensk marknadsplats för förstahandsuthyrning
               </div>
 
               <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] text-white md:text-7xl">
-                Hitta, jämför och agera snabbare på rätt objekt.
+                Vägen till ditt nästa hem — tydlig och rättvis.
               </h1>
 
               <p className="mt-6 max-w-2xl text-base leading-8 text-white/82 md:text-xl">
-                Bovaro samlar hyresbostäder, bostäder till salu, lokaler, kontor och fastighetsobjekt i ett premiumflöde för både sökande och annonsörer.
+                Sök förstahandskontrakt med en kostnadsfri bostadskö och en återanvändbar profil. Bovaro samlar även
+                bostäder till salu och lokaler — men hyresbostäder kommer alltid först.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button
-                  href="/listings"
+                  href="/rent"
                   className="border border-white/22 bg-white !text-[#111827] shadow-[0_20px_60px_rgba(255,255,255,0.18)] hover:bg-white/90"
                 >
-                  Utforska objekt
+                  Hitta hyresbostad
                   <ArrowRight size={16} className="ml-2" />
                 </Button>
 
                 <Button
-                  href="/register"
+                  href="/bostadsko"
                   className="border border-white/22 bg-white/10 !text-white hover:bg-white/16"
                 >
                   <ShieldCheck size={16} className="mr-2" />
-                  Skapa trygg profil
+                  Ställ dig i kön gratis
                 </Button>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3 text-sm font-semibold text-white/76">
-                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Dynamiska filter</span>
-                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Verifierade flöden</span>
-                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Dashboard för annonsörer</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Kostnadsfri bostadskö</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Tydliga krav per bostad</span>
+                <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} className="text-[#5eead4]" /> Verktyg för hyresvärdar</span>
               </div>
 
               <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">

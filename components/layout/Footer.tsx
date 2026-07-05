@@ -9,10 +9,11 @@ export function Footer() {
             <div>
               <div className="text-xl font-semibold tracking-[-0.02em]">Bovaro</div>
               <p className="mt-3 max-w-sm text-sm leading-7 text-white/68">
-                En modern fastighetsplattform för hyra, köp, lokaler och annonsörsflöden - byggd för bättre matchning och tryggare kontakt.
+                En svensk marknadsplats för förstahandsuthyrning — med kostnadsfri bostadskö, tydliga krav och ett
+                modernt arbetsflöde för hyresvärdar.
               </p>
               <div className="mt-5 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/76">
-                Sverige · Bostäder · Kommersiellt
+                Sverige · Hyresbostäder · Hyresvärdar
               </div>
             </div>
             <div>
@@ -21,11 +22,31 @@ export function Footer() {
                 <Link href="/rent" className="block transition hover:text-white">
                   Hyra
                 </Link>
+                <Link href="/bostadsko" className="block transition hover:text-white">
+                  Bostadskö
+                </Link>
                 <Link href="/buy" className="block transition hover:text-white">
                   Till salu
                 </Link>
                 <Link href="/listings" className="block transition hover:text-white">
                   Alla objekt
+                </Link>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold">Tjänster</div>
+              <div className="mt-4 space-y-3 text-sm text-white/64">
+                <Link href="/hyresvardar" className="block transition hover:text-white">
+                  För hyresvärdar
+                </Link>
+                <Link href="/plus" className="block transition hover:text-white">
+                  Bovaro Plus
+                </Link>
+                <Link href="/byta" className="block transition hover:text-white">
+                  Bovaro Byta
+                </Link>
+                <Link href="/support" className="block transition hover:text-white">
+                  Support
                 </Link>
               </div>
             </div>
@@ -41,14 +62,7 @@ export function Footer() {
                 <Link href="/dashboard" className="block transition hover:text-white">
                   Dashboard
                 </Link>
-              </div>
-            </div>
-            <div>
-              <div className="font-semibold">Kontakt</div>
-              <div className="mt-4 space-y-3 text-sm text-white/64">
-                <p>support@bovaro.se</p>
-                <p>Stockholm · Sverige</p>
-                <p>För hyresvärdar, köpare, säljare och företag.</p>
+                <p className="pt-2 text-xs text-white/40">support@bovaro.se · Stockholm</p>
               </div>
             </div>
           </div>

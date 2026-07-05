@@ -7,7 +7,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { getPostLoginPath } from '@/lib/auth/entry'
 import { getSafeNextPath } from '@/lib/url'
+import type { AppRole } from '@/lib/types'
 
 type LoginStatus = 'idle' | 'loading' | 'error'
 
@@ -41,14 +43,34 @@ export function LoginForm() {
       return
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setStatus('error')
       setMessage('Inloggningen misslyckades. Kontrollera e-post och lösenord.')
       return
     }
 
-    router.replace(next)
+    // Role-aware landing page. This is a UX redirect only — access to every
+    // destination is enforced server-side.
+    let destination = next
+    if (signIn.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, account_type, onboarding_completed')
+        .eq('id', signIn.user.id)
+        .maybeSingle()
+
+      destination = getPostLoginPath(
+        {
+          role: (profile?.role as AppRole | null) ?? null,
+          accountType: profile?.account_type ?? null,
+          onboardingCompleted: profile?.onboarding_completed ?? false,
+        },
+        next,
+      )
+    }
+
+    router.replace(destination)
     router.refresh()
   }
 

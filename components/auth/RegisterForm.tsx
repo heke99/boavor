@@ -139,11 +139,13 @@ export function RegisterForm() {
     const organizationNumber = String(formData.get('organizationNumber') ?? '').trim()
     const companySlug = companyName ? `${createSlug(companyName)}-${Date.now().toString(36)}` : null
 
+    const onboardingPath = isCompany ? '/dashboard/listings?onboarding=1' : '/dashboard/profile?onboarding=1'
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(onboardingPath)}`,
         data: {
           account_type: accountType,
           first_name: firstName,
