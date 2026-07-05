@@ -88,6 +88,10 @@ export type ListingCardItem = {
   occupancyRate?: number | null
   vacancyRate?: number | null
   isVerified?: boolean
+  isStudentHousing?: boolean
+  isSeniorHousing?: boolean
+  isShortTerm?: boolean
+  hasAccessibility?: boolean
 }
 
 export type ListingDetailItem = ListingCardItem & {
@@ -100,6 +104,11 @@ export type ListingDetailItem = ListingCardItem & {
   monthlyFee: number | null
   latitude: number | null
   longitude: number | null
+  applicationDeadline: string | null
+  viewingInfo: string | null
+  policySummary: string | null
+  hideExactAddress: boolean
+  showApplicantCount: boolean
   images: Array<{
     id: string
     imageUrl: string
@@ -162,6 +171,10 @@ export type SearchFilters = {
   minCapRate?: string
   minOccupancyRate?: string
   maxVacancyRate?: string
+  student?: string
+  senior?: string
+  shortTerm?: string
+  accessibility?: string
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'area_desc'
 }
 
@@ -405,6 +418,15 @@ export type ListingEditItem = ManagedListingDetailItem & {
   coverImageUrl?: string | null
   features: string[]
   rentalRequirements: ListingRentalRequirementItem | null
+  isStudentHousing?: boolean
+  isSeniorHousing?: boolean
+  isShortTerm?: boolean
+  hasAccessibility?: boolean
+  applicationDeadline?: string | null
+  viewingInfo?: string | null
+  policySummary?: string | null
+  hideExactAddress?: boolean
+  showApplicantCount?: boolean
 }
 
 export type ListingInquiryItem = {

@@ -140,6 +140,14 @@ function getFields(category: ListingCategory, mode: ListingType | ''): FieldConf
     { key: 'hasElevator', label: 'Hiss', type: 'boolean' },
     { key: 'hasParking', label: 'Parkering', type: 'boolean' },
     { key: 'petsAllowed', label: 'Husdjur tillåtet', type: 'boolean' },
+    ...(mode !== 'sale'
+      ? ([
+          { key: 'student', label: 'Studentbostad', type: 'boolean' },
+          { key: 'senior', label: 'Seniorbostad', type: 'boolean' },
+          { key: 'shortTerm', label: 'Korttidskontrakt', type: 'boolean' },
+          { key: 'accessibility', label: 'Tillgänglighetsanpassad', type: 'boolean' },
+        ] as FieldConfig[])
+      : []),
   ]
 }
 

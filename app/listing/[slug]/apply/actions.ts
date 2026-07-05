@@ -58,14 +58,19 @@ export async function submitRentalApplication(formData: FormData) {
 
   const { data: owner } = await supabase
     .from('listings')
-    .select('id, created_by, company_id')
+    .select('id, created_by, company_id, application_deadline')
     .eq('slug', listing.slug)
-    .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
+    .maybeSingle<{ id: string; created_by: string | null; company_id: string | null; application_deadline: string | null }>()
 
   // listing_id is NOT NULL in the database; without an owning listing row the
   // application cannot be stored.
   if (!owner?.id) {
     redirect(`/listing/${slug}/apply?error=failed`)
+  }
+
+  // Applications close automatically after the deadline.
+  if (owner.application_deadline && new Date(owner.application_deadline).getTime() < Date.now()) {
+    redirect(`/listing/${slug}/apply?error=deadline_passed`)
   }
 
   const { data: existingApplication } = await supabase

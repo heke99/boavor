@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/award-queue-points",
       "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/saved-search-matching",
+      "schedule": "0 * * * *"
     }
   ]
 }

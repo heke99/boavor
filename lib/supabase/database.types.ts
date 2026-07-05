@@ -816,6 +816,7 @@ export type Database = {
         Row: {
           access_24_7: boolean
           annual_income: number | null
+          application_deadline: string | null
           area_name: string | null
           area_sqm: number | null
           available_from: string | null
@@ -830,6 +831,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           floor: string | null
+          has_accessibility: boolean
           has_balcony: boolean
           has_building_rights: boolean
           has_camera_surveillance: boolean
@@ -843,11 +845,15 @@ export type Database = {
           has_reception: boolean
           has_road_access: boolean
           has_water_sewer: boolean
+          hide_exact_address: boolean
           id: string
           investment_type: Database["public"]["Enums"]["investment_type"] | null
           is_furnished: boolean
           is_garage: boolean
           is_heated: boolean
+          is_senior_housing: boolean
+          is_short_term: boolean
+          is_student_housing: boolean
           is_vat_applicable: boolean
           is_verified: boolean
           land_type: Database["public"]["Enums"]["land_type"] | null
@@ -865,11 +871,13 @@ export type Database = {
           operating_cost: number | null
           parking_type: Database["public"]["Enums"]["parking_type"] | null
           pets_allowed: boolean
+          policy_summary: string | null
           price: number
           price_per_sqm: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           published_at: string | null
           rooms: number | null
+          show_applicant_count: boolean
           slug: string
           status: Database["public"]["Enums"]["listing_status"]
           storage_type: Database["public"]["Enums"]["storage_type"] | null
@@ -878,12 +886,14 @@ export type Database = {
           units_count: number | null
           updated_at: string
           vacancy_rate: number | null
+          viewing_info: string | null
           workplaces: number | null
           zip_code: string | null
         }
         Insert: {
           access_24_7?: boolean
           annual_income?: number | null
+          application_deadline?: string | null
           area_name?: string | null
           area_sqm?: number | null
           available_from?: string | null
@@ -900,6 +910,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           floor?: string | null
+          has_accessibility?: boolean
           has_balcony?: boolean
           has_building_rights?: boolean
           has_camera_surveillance?: boolean
@@ -913,6 +924,7 @@ export type Database = {
           has_reception?: boolean
           has_road_access?: boolean
           has_water_sewer?: boolean
+          hide_exact_address?: boolean
           id?: string
           investment_type?:
             | Database["public"]["Enums"]["investment_type"]
@@ -920,6 +932,9 @@ export type Database = {
           is_furnished?: boolean
           is_garage?: boolean
           is_heated?: boolean
+          is_senior_housing?: boolean
+          is_short_term?: boolean
+          is_student_housing?: boolean
           is_vat_applicable?: boolean
           is_verified?: boolean
           land_type?: Database["public"]["Enums"]["land_type"] | null
@@ -937,11 +952,13 @@ export type Database = {
           operating_cost?: number | null
           parking_type?: Database["public"]["Enums"]["parking_type"] | null
           pets_allowed?: boolean
+          policy_summary?: string | null
           price?: number
           price_per_sqm?: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          show_applicant_count?: boolean
           slug: string
           status?: Database["public"]["Enums"]["listing_status"]
           storage_type?: Database["public"]["Enums"]["storage_type"] | null
@@ -950,12 +967,14 @@ export type Database = {
           units_count?: number | null
           updated_at?: string
           vacancy_rate?: number | null
+          viewing_info?: string | null
           workplaces?: number | null
           zip_code?: string | null
         }
         Update: {
           access_24_7?: boolean
           annual_income?: number | null
+          application_deadline?: string | null
           area_name?: string | null
           area_sqm?: number | null
           available_from?: string | null
@@ -972,6 +991,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           floor?: string | null
+          has_accessibility?: boolean
           has_balcony?: boolean
           has_building_rights?: boolean
           has_camera_surveillance?: boolean
@@ -985,6 +1005,7 @@ export type Database = {
           has_reception?: boolean
           has_road_access?: boolean
           has_water_sewer?: boolean
+          hide_exact_address?: boolean
           id?: string
           investment_type?:
             | Database["public"]["Enums"]["investment_type"]
@@ -992,6 +1013,9 @@ export type Database = {
           is_furnished?: boolean
           is_garage?: boolean
           is_heated?: boolean
+          is_senior_housing?: boolean
+          is_short_term?: boolean
+          is_student_housing?: boolean
           is_vat_applicable?: boolean
           is_verified?: boolean
           land_type?: Database["public"]["Enums"]["land_type"] | null
@@ -1009,11 +1033,13 @@ export type Database = {
           operating_cost?: number | null
           parking_type?: Database["public"]["Enums"]["parking_type"] | null
           pets_allowed?: boolean
+          policy_summary?: string | null
           price?: number
           price_per_sqm?: number | null
           property_type?: Database["public"]["Enums"]["property_type"]
           published_at?: string | null
           rooms?: number | null
+          show_applicant_count?: boolean
           slug?: string
           status?: Database["public"]["Enums"]["listing_status"]
           storage_type?: Database["public"]["Enums"]["storage_type"] | null
@@ -1022,6 +1048,7 @@ export type Database = {
           units_count?: number | null
           updated_at?: string
           vacancy_rate?: number | null
+          viewing_info?: string | null
           workplaces?: number | null
           zip_code?: string | null
         }
@@ -1707,6 +1734,48 @@ export type Database = {
           },
         ]
       }
+      saved_search_matches: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          notified_at: string | null
+          saved_search_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          notified_at?: string | null
+          saved_search_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          notified_at?: string | null
+          saved_search_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_search_matches_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_search_matches_saved_search_id_fkey"
+            columns: ["saved_search_id"]
+            isOneToOne: false
+            referencedRelation: "saved_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_search_notification_runs: {
         Row: {
           created_at: string
@@ -2107,6 +2176,10 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      estimated_queue_position: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       finalize_identity_verification: {
         Args: {
           p_age_verified?: boolean
@@ -2136,6 +2209,10 @@ export type Database = {
           points: number
           user_id: string
         }[]
+      }
+      public_listing_applicant_count: {
+        Args: { p_listing_id: string }
+        Returns: number
       }
       reset_queue_points: {
         Args: { p_reason: string; p_user_id: string }

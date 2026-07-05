@@ -42,7 +42,9 @@ export default async function ApplyPage({ params, searchParams }: Props) {
             ? 'Du måste godkänna att dina uppgifter delas med hyresvärden.'
             : errorCode === 'limit_reached'
               ? `Du har nått gränsen för aktiva ansökningar (${limitCheck.limit} st). Återkalla en ansökan eller vänta tills en avslutas.`
-              : null
+              : errorCode === 'deadline_passed'
+                ? 'Ansökningstiden för den här bostaden har gått ut.'
+                : null
 
   if (!identity.isVerified || !identity.isAdult) {
     return (

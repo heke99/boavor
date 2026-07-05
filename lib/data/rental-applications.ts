@@ -469,6 +469,15 @@ type ManagedListingEditRow = ManagedListingDetailRow & {
   units_count: number | string | null
   created_by: string | null
   company_id: string | null
+  is_student_housing?: boolean | null
+  is_senior_housing?: boolean | null
+  is_short_term?: boolean | null
+  has_accessibility?: boolean | null
+  application_deadline?: string | null
+  viewing_info?: string | null
+  policy_summary?: string | null
+  hide_exact_address?: boolean | null
+  show_applicant_count?: boolean | null
 }
 
 type ListingInternalNoteRow = {
@@ -713,7 +722,7 @@ export async function getManagedListingEditData(listingId: string): Promise<List
 
   const { data: listing, error } = await supabase
     .from('listings')
-    .select('id, slug, title, description, street, area_name, zip_code, available_from, city, listing_type, listing_segment, property_type, commercial_type, parking_type, storage_type, land_type, investment_type, business_purpose, is_vat_applicable, monthly_service_fee, price_per_sqm, min_lease_months, annual_income, operating_cost, cap_rate, units_count, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .select('id, slug, title, description, street, area_name, zip_code, available_from, city, listing_type, listing_segment, property_type, commercial_type, parking_type, storage_type, land_type, investment_type, business_purpose, is_vat_applicable, monthly_service_fee, price_per_sqm, min_lease_months, annual_income, operating_cost, cap_rate, units_count, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id, is_student_housing, is_senior_housing, is_short_term, has_accessibility, application_deadline, viewing_info, policy_summary, hide_exact_address, show_applicant_count')
     .eq('id', listingId)
     .maybeSingle<ManagedListingEditRow>()
 
@@ -794,6 +803,15 @@ export async function getManagedListingEditData(listingId: string): Promise<List
     areaName: listing.area_name,
     zipCode: listing.zip_code,
     availableFrom: listing.available_from,
+    isStudentHousing: Boolean(listing.is_student_housing),
+    isSeniorHousing: Boolean(listing.is_senior_housing),
+    isShortTerm: Boolean(listing.is_short_term),
+    hasAccessibility: Boolean(listing.has_accessibility),
+    applicationDeadline: listing.application_deadline ?? null,
+    viewingInfo: listing.viewing_info ?? null,
+    policySummary: listing.policy_summary ?? null,
+    hideExactAddress: Boolean(listing.hide_exact_address),
+    showApplicantCount: Boolean(listing.show_applicant_count),
     images: ((images ?? []) as ListingImageRow[]).map((image) => ({
       id: image.id,
       imageUrl: image.image_url,

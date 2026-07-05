@@ -11,7 +11,7 @@ import {
   Ruler,
   ShieldCheck,
 } from 'lucide-react'
-import { getListingBySlug, getRelatedListings } from '@/lib/data/listings'
+import { getListingBySlug, getListingPublicStats, getRelatedListings } from '@/lib/data/listings'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ListingGrid } from '@/components/listings/ListingGrid'
@@ -58,8 +58,15 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
     notFound()
   }
 
-  const related = await getRelatedListings(listing, 3)
   const usesApplication = isRentalApplicationListing(listing.listingSegment, listing.listingType)
+  const [related, publicStats] = await Promise.all([
+    getRelatedListings(listing, 3),
+    usesApplication ? getListingPublicStats(listing.id) : Promise.resolve({ applicantCount: null, queuePosition: null }),
+  ])
+  const renderedAt = new Date()
+  const deadlinePassed = listing.applicationDeadline
+    ? new Date(listing.applicationDeadline) < renderedAt
+    : false
   const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
   const inquirySent = sp.inquiry === 'sent'
   const inquiryError =
@@ -122,7 +129,18 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
             <div className="mt-4 flex items-center gap-2 text-sm text-[#5b6475]">
               <MapPinned size={15} />
               {[listing.street, listing.areaName, listing.city].filter(Boolean).join(', ')}
+              {listing.hideExactAddress ? (
+                <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">Exakt adress visas senare i processen</span>
+              ) : null}
             </div>
+            {(listing.isStudentHousing || listing.isSeniorHousing || listing.isShortTerm || listing.hasAccessibility) ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {listing.isStudentHousing ? <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#4338ca]">Studentbostad</span> : null}
+                {listing.isSeniorHousing ? <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#4338ca]">Seniorbostad</span> : null}
+                {listing.isShortTerm ? <span className="rounded-full bg-[#fef3c7] px-3 py-1 text-xs font-semibold text-[#92400e]">Korttidskontrakt</span> : null}
+                {listing.hasAccessibility ? <span className="rounded-full bg-[#ecfdf5] px-3 py-1 text-xs font-semibold text-[#047857]">Tillgänglighetsanpassad</span> : null}
+              </div>
+            ) : null}
             <div className="mt-6 text-3xl font-semibold text-[var(--primary)]">{formatCurrency(listing.price, listing.listingType)}</div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -185,6 +203,39 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
                   <FactCard label="Referenser krävs" value={yesNo(listing.rentalRequirements.referencesRequired)} />
                   <FactCard label="Husdjur" value={listing.rentalRequirements.petsAllowed ? 'Tillåtet' : 'Ej angivet'} />
                 </div>
+                {listing.policySummary ? (
+                  <p className="mt-4 rounded-2xl bg-[#f7f8fc] p-4 text-sm leading-7 text-[#5b6475]">{listing.policySummary}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {usesApplication ? (
+              <div className="mt-6 rounded-[30px] border border-black/8 bg-white p-6 shadow-[0_10px_30px_rgba(13,17,32,0.05)]">
+                <h2 className="text-2xl font-semibold text-[#111827]">Så går uthyrningen till</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <FactCard
+                    label="Sista ansökningsdag"
+                    value={
+                      listing.applicationDeadline
+                        ? `${formatDate(listing.applicationDeadline)}${deadlinePassed ? ' (passerad)' : ''}`
+                        : 'Löpande urval'
+                    }
+                  />
+                  <FactCard label="Visning" value={listing.viewingInfo || 'Information kommer från hyresvärden'} />
+                  {publicStats.applicantCount !== null ? (
+                    <FactCard label="Antal sökande" value={`${publicStats.applicantCount} st`} />
+                  ) : null}
+                  {publicStats.queuePosition ? (
+                    <FactCard
+                      label="Din uppskattade köplats"
+                      value={`Plats ${publicStats.queuePosition.position} (${publicStats.queuePosition.points} poäng)`}
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm leading-7 text-[#5b6475]">
+                  Du ansöker med din Bovaro-profil. Hyresvärden ser din ansökan med kötid, inkomst och valda dokument
+                  och gör ett urval utifrån sina krav. Du kan följa status under Ansökningar i din översikt.
+                </p>
               </div>
             ) : null}
 

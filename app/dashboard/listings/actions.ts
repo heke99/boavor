@@ -423,6 +423,16 @@ export async function updateListingDetailsAction(formData: FormData) {
     rooms: listingSegment === 'residential' ? getNullableNumber(formData, 'rooms') : null,
     available_from: getNullableString(formData, 'availableFrom'),
     published_at: status === 'published' ? new Date().toISOString() : null,
+    // Rental process settings (Batch 5)
+    is_student_housing: formData.get('isStudentHousing') === 'on',
+    is_senior_housing: formData.get('isSeniorHousing') === 'on',
+    is_short_term: formData.get('isShortTerm') === 'on',
+    has_accessibility: formData.get('hasAccessibility') === 'on',
+    application_deadline: getNullableString(formData, 'applicationDeadline'),
+    viewing_info: getNullableString(formData, 'viewingInfo'),
+    policy_summary: getNullableString(formData, 'policySummary'),
+    hide_exact_address: formData.get('hideExactAddress') === 'on',
+    show_applicant_count: formData.get('showApplicantCount') === 'on',
   }
 
   const { error } = await supabase.from('listings').update(updatePayload).eq('id', listingId)

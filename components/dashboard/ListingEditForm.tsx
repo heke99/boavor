@@ -246,6 +246,57 @@ export function ListingEditForm({ listing, action }: Props) {
               <option value="false">Referenser ej krav</option>
               <option value="true">Referenser krävs</option>
             </Select>
+
+            <div className="md:col-span-2 xl:col-span-3 grid gap-3 rounded-3xl border border-black/8 bg-[#fbfbfe] p-5">
+              <div className="text-sm font-semibold text-[#111827]">Uthyrningsprocess</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Sista ansökningsdag (valfritt)</label>
+                  <Input
+                    name="applicationDeadline"
+                    type="date"
+                    defaultValue={listing.applicationDeadline ? listing.applicationDeadline.slice(0, 10) : ''}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Visningsinformation</label>
+                  <Input name="viewingInfo" defaultValue={listing.viewingInfo ?? ''} placeholder="T.ex. Visning bokas efter urval" />
+                </div>
+              </div>
+              <textarea
+                name="policySummary"
+                rows={3}
+                defaultValue={listing.policySummary ?? ''}
+                placeholder="Kort sammanfattning av era uthyrningskrav och hur urvalet går till (visas publikt)"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+              />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isStudentHousing" defaultChecked={listing.isStudentHousing ?? false} />
+                  Studentbostad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isSeniorHousing" defaultChecked={listing.isSeniorHousing ?? false} />
+                  Seniorbostad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isShortTerm" defaultChecked={listing.isShortTerm ?? false} />
+                  Korttidskontrakt
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="hasAccessibility" defaultChecked={listing.hasAccessibility ?? false} />
+                  Tillgänglighetsanpassad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="hideExactAddress" defaultChecked={listing.hideExactAddress ?? false} />
+                  Dölj exakt adress publikt
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="showApplicantCount" defaultChecked={listing.showApplicantCount ?? false} />
+                  Visa antal sökande publikt
+                </label>
+              </div>
+            </div>
           </>
         ) : null}
       </div>
