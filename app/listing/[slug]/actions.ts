@@ -4,8 +4,66 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getListingBySlug } from '@/lib/data/listings'
+import { runMatchkoll } from '@/lib/data/matchkoll'
+import { requireVerifiedAdult } from '@/lib/data/identity'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { InquiryType } from '@/lib/types'
+
+export async function runMatchkollAction(formData: FormData) {
+  const slug = String(formData.get('slug') ?? '')
+  if (!slug) return
+
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) redirect(`/listing/${slug}?matchkoll=unavailable`)
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(`/listing/${slug}`)}`)
+  }
+
+  const identity = await requireVerifiedAdult(user.id)
+  if (!identity.verified) {
+    redirect(`/listing/${slug}?matchkoll=identity_required`)
+  }
+
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'matchkoll',
+    subject: `${user.id}:${slug}`,
+    limit: 10,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) {
+    redirect(`/listing/${slug}?matchkoll=rate_limited`)
+  }
+
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id, price, listing_type, status')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+
+  if (!listing || listing.listing_type !== 'rent') {
+    redirect(`/listing/${slug}`)
+  }
+
+  const run = await runMatchkoll(supabase, {
+    userId: user.id,
+    listingId: listing.id,
+    rentAmount: listing.price,
+    context: 'precheck',
+  })
+
+  if (!run) {
+    redirect(`/listing/${slug}?matchkoll=profile_required`)
+  }
+
+  revalidatePath(`/listing/${slug}`)
+  redirect(`/listing/${slug}?matchkoll=done`)
+}
 
 export async function submitListingInquiry(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')

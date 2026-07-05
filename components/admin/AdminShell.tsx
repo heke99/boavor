@@ -20,6 +20,7 @@ const navItems = [
   { href: '/admin/identity', label: 'Identitet', icon: Fingerprint },
   { href: '/admin/documents', label: 'Dokument', icon: FileText },
   { href: '/admin/queue', label: 'Bostadskö', icon: Clock3 },
+  { href: '/admin/policies', label: 'Policyer', icon: ClipboardList },
   { href: '/admin/companies', label: 'Företag', icon: Building2 },
   { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },

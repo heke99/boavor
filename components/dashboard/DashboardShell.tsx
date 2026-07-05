@@ -24,6 +24,7 @@ const navItems = [
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
   { href: '/dashboard/saved-searches', label: 'Sparade sökningar', icon: SearchCheck },
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
+  { href: '/dashboard/policies', label: 'Policyer', icon: ShieldCheck },
   { href: '/dashboard/inquiries', label: 'Leads', icon: Inbox },
   { href: '/dashboard/settings', label: 'Inställningar', icon: Settings },
 ]

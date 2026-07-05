@@ -15,8 +15,12 @@ import { getListingBySlug, getListingPublicStats, getRelatedListings } from '@/l
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ListingGrid } from '@/components/listings/ListingGrid'
+import { MatchkollCard } from '@/components/listings/MatchkollCard'
 import { Card } from '@/components/ui/Card'
 import { getListingPrimaryMeta, isRentalApplicationListing, listingTypeLabels } from '@/lib/listing-options'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLatestPrecheck, hasPlusEntitlement, type StoredEvaluation } from '@/lib/data/matchkoll'
+import { requireVerifiedAdult } from '@/lib/data/identity'
 import { submitListingInquiry } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +67,41 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
     getRelatedListings(listing, 3),
     usesApplication ? getListingPublicStats(listing.id) : Promise.resolve({ applicantCount: null, queuePosition: null }),
   ])
+
+  // Matchkoll state for the signed-in user.
+  let matchkollUser: { isSignedIn: boolean; isVerified: boolean; hasPlus: boolean } = {
+    isSignedIn: false,
+    isVerified: false,
+    hasPlus: false,
+  }
+  let matchkollEvaluation: StoredEvaluation | null = null
+  if (usesApplication) {
+    const supabase = await createSupabaseServerClient()
+    if (supabase) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const [identity, plus, evaluation] = await Promise.all([
+          requireVerifiedAdult(user.id),
+          hasPlusEntitlement(supabase, user.id),
+          getLatestPrecheck(supabase, user.id, listing.id),
+        ])
+        matchkollUser = { isSignedIn: true, isVerified: identity.verified, hasPlus: plus }
+        matchkollEvaluation = evaluation
+      }
+    }
+  }
+  const matchkollStatus = typeof sp.matchkoll === 'string' ? sp.matchkoll : null
+  const matchkollMessage =
+    matchkollStatus === 'identity_required'
+      ? 'Verifiera din identitet för att kunna köra Matchkoll.'
+      : matchkollStatus === 'rate_limited'
+        ? 'Du har kört Matchkoll många gånger nyligen. Vänta en stund och försök igen.'
+        : matchkollStatus === 'profile_required'
+          ? 'Fyll i din profil innan du kör Matchkoll.'
+          : null
+
   const renderedAt = new Date()
   const deadlinePassed = listing.applicationDeadline
     ? new Date(listing.applicationDeadline) < renderedAt
@@ -274,15 +313,32 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
             </div>
             <div className="mt-6 space-y-3">
               {usesApplication ? (
-                <Button href={`/listing/${listing.slug}/apply`} className="w-full">
-                  Ansök om bostaden
-                </Button>
+                deadlinePassed ? (
+                  <div className="rounded-2xl bg-[#f3f4f6] p-4 text-center text-sm font-semibold text-[#6b7280]">
+                    Ansökningstiden har gått ut
+                  </div>
+                ) : (
+                  <Button href={`/listing/${listing.slug}/apply`} className="w-full">
+                    Ansök om bostaden
+                  </Button>
+                )
               ) : null}
               <Button href="/dashboard/favorites" variant="ghost" className="w-full border border-black/8">
                 Spara som favorit
               </Button>
             </div>
           </Card>
+
+          {usesApplication ? (
+            <MatchkollCard
+              slug={listing.slug}
+              isSignedIn={matchkollUser.isSignedIn}
+              isVerified={matchkollUser.isVerified}
+              hasPlus={matchkollUser.hasPlus}
+              evaluation={matchkollEvaluation}
+              statusMessage={matchkollMessage}
+            />
+          ) : null}
 
           {!usesApplication ? (
             <Card className="p-6">

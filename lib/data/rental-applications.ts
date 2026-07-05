@@ -629,18 +629,26 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
   ])
 
   const applicationIds = ((applicationRows ?? []) as RentalApplicationRow[]).map((item) => item.id)
-  const [{ data: coApplicants }, { data: documents }] = applicationIds.length
+  const [{ data: coApplicants }, { data: documents }, { data: policyResults }] = applicationIds.length
     ? await Promise.all([
         supabase.from('rental_application_co_applicants').select('application_id, full_name, email, phone, relationship').in('application_id', applicationIds),
         supabase.from('rental_application_documents').select('application_id, file_name, file_url, document_type').in('application_id', applicationIds),
+        supabase.from('application_policy_results').select('application_id, result').in('application_id', applicationIds),
       ])
-    : [{ data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }]
+
+  const policyResultMap = new Map<string, string>(
+    ((policyResults ?? []) as Array<{ application_id: string; result: string }>).map((row) => [row.application_id, row.result]),
+  )
 
   const applications = mapApplicationRows(
     (applicationRows ?? []) as RentalApplicationRow[],
     (coApplicants ?? []) as ApplicationCoApplicantRow[],
     (documents ?? []) as ApplicationDocumentRow[],
-  )
+  ).map((application) => ({
+    ...application,
+    policyResult: (policyResultMap.get(application.id) as RentalApplicationItem['policyResult']) ?? null,
+  }))
 
   const inquiries: ListingInquiryItem[] = ((inquiryRows ?? []) as InquiryRow[]).map((row) => ({
     id: row.id,

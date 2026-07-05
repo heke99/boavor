@@ -20,6 +20,8 @@ import { listingActionLabels, listingSegmentLabels } from '@/lib/listing-options
 type Props = {
   listing: ListingEditItem
   action: (formData: FormData) => void | Promise<void>
+  policies?: Array<{ id: string; name: string }>
+  assignedPolicyId?: string | null
 }
 
 const segmentOptions: Array<{ value: ListingSegment; label: string; help: string }> = [
@@ -39,7 +41,7 @@ function valueOrEmpty(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value)
 }
 
-export function ListingEditForm({ listing, action }: Props) {
+export function ListingEditForm({ listing, action, policies = [], assignedPolicyId = null }: Props) {
   const [segment, setSegment] = useState<ListingSegment>(listing.listingSegment)
   const [listingType, setListingType] = useState<ListingType>(listing.listingType)
   const [commercialType, setCommercialType] = useState<CommercialType>(listing.commercialType ?? 'retail')
@@ -270,6 +272,17 @@ export function ListingEditForm({ listing, action }: Props) {
                 placeholder="Kort sammanfattning av era uthyrningskrav och hur urvalet går till (visas publikt)"
                 className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
               />
+              {policies.length > 0 ? (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Uthyrningspolicy (Matchkoll)</label>
+                  <Select name="policyId" defaultValue={assignedPolicyId ?? ''}>
+                    <option value="">Använd annonsens hyreskrav</option>
+                    {policies.map((policy) => (
+                      <option key={policy.id} value={policy.id}>{policy.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
                   <input type="checkbox" name="isStudentHousing" defaultChecked={listing.isStudentHousing ?? false} />

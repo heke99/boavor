@@ -9,6 +9,7 @@ import { recordConsent } from '@/lib/consents/consents'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/data/queue'
 import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
+import { runMatchkoll } from '@/lib/data/matchkoll'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -141,6 +142,33 @@ export async function submitRentalApplication(formData: FormData) {
   await recordConsent(supabase, { userId: user.id, consentType: 'application_data_sharing', source: 'apply' })
   if (selectedDocuments.length > 0) {
     await recordConsent(supabase, { userId: user.id, consentType: 'document_sharing', source: 'apply' })
+  }
+
+  // Server-side policy evaluation (Matchkoll) with immutable result snapshot.
+  const matchkollRun = await runMatchkoll(supabase, {
+    userId: user.id,
+    listingId: owner.id,
+    rentAmount: listing.price,
+    context: 'application',
+  })
+
+  if (matchkollRun) {
+    const { data: latestEvaluation } = await supabase
+      .from('policy_evaluations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', owner.id)
+      .eq('context', 'application')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    await supabase.from('application_policy_results').insert({
+      application_id: created.id,
+      evaluation_id: latestEvaluation?.id ?? null,
+      result: matchkollRun.evaluation.result,
+      outcomes: JSON.parse(JSON.stringify(matchkollRun.evaluation.outcomes)),
+    })
   }
 
   // Immutable snapshot of the applicant profile at submission time. Future

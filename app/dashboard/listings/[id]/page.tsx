@@ -159,6 +159,28 @@ export default async function DashboardListingDetailPage({ params }: { params: P
                       <div className="text-lg font-semibold text-[#111827]">{application.applicant.fullName}</div>
                       <div className="mt-1 text-sm text-[#6b7280]">{application.applicant.email} · {application.applicant.phone || 'Ingen telefon'}</div>
                       <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#6b7280]">
+                        {application.policyResult ? (
+                          <span
+                            className={`rounded-full px-3 py-1 font-semibold ${
+                              application.policyResult === 'eligible'
+                                ? 'bg-[#dcfce7] text-[#166534]'
+                                : application.policyResult === 'likely_eligible'
+                                  ? 'bg-[#dbeafe] text-[#1d4ed8]'
+                                  : application.policyResult === 'missing_info'
+                                    ? 'bg-[#fef3c7] text-[#92400e]'
+                                    : 'bg-[#fee2e2] text-[#b91c1c]'
+                            }`}
+                          >
+                            Matchkoll:{' '}
+                            {application.policyResult === 'eligible'
+                              ? 'Uppfyller krav'
+                              : application.policyResult === 'likely_eligible'
+                                ? 'Uppfyller troligen krav'
+                                : application.policyResult === 'missing_info'
+                                  ? 'Uppgifter saknas'
+                                  : 'Uppfyller ej krav'}
+                          </span>
+                        ) : null}
                         <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Score: {application.applicantScore ?? 0}/100</span>
                         <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Köpoäng: {application.queuePointsSnapshot}</span>
                         <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Dokument: {application.documents.length}</span>

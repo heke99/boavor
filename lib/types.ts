@@ -309,6 +309,8 @@ export type ProfileFormValues = {
   desiredLocations: string[]
 }
 
+export type MatchkollResultValue = 'eligible' | 'likely_eligible' | 'missing_info' | 'not_eligible'
+
 export type RentalApplicationItem = {
   id: string
   listingId?: string | null
@@ -319,6 +321,7 @@ export type RentalApplicationItem = {
   queueJoinedAtSnapshot: string | null
   applicantsCountForListing?: number
   applicantScore?: number
+  policyResult?: MatchkollResultValue | null
   listing: {
     slug: string
     title: string

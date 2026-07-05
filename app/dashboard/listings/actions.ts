@@ -441,6 +441,16 @@ export async function updateListingDetailsAction(formData: FormData) {
     return
   }
 
+  // Policy assignment for Matchkoll (empty value = legacy rental requirements).
+  const policyId = String(formData.get('policyId') ?? '').trim()
+  if (policyId) {
+    await supabase
+      .from('listing_policy_assignments')
+      .upsert({ listing_id: listingId, policy_id: policyId }, { onConflict: 'listing_id' })
+  } else if (formData.has('policyId')) {
+    await supabase.from('listing_policy_assignments').delete().eq('listing_id', listingId)
+  }
+
   await supabase.from('listing_features').delete().eq('listing_id', listingId)
   if (features.length > 0) {
     await supabase.from('listing_features').insert(

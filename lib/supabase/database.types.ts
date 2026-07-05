@@ -93,6 +93,45 @@ export type Database = {
         }
         Relationships: []
       }
+      application_policy_results: {
+        Row: {
+          application_id: string
+          created_at: string
+          evaluation_id: string | null
+          outcomes: Json
+          result: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          evaluation_id?: string | null
+          outcomes?: Json
+          result: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          evaluation_id?: string | null
+          outcomes?: Json
+          result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_policy_results_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_policy_results_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "policy_evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_profile_snapshots: {
         Row: {
           application_id: string
@@ -517,6 +556,50 @@ export type Database = {
         }
         Relationships: []
       }
+      landlord_policies: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          current_version: number
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          owner_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          owner_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          owner_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landlord_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_acceptances: {
         Row: {
           accepted_at: string
@@ -812,6 +895,39 @@ export type Database = {
           },
         ]
       }
+      listing_policy_assignments: {
+        Row: {
+          created_at: string
+          listing_id: string
+          policy_id: string
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          policy_id: string
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          policy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_policy_assignments_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_policy_assignments_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "landlord_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           access_24_7: boolean
@@ -1088,6 +1204,92 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      policy_evaluations: {
+        Row: {
+          context: string
+          created_at: string
+          id: string
+          listing_id: string
+          outcomes: Json
+          policy_id: string | null
+          policy_version: number | null
+          result: string
+          user_id: string
+        }
+        Insert: {
+          context?: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          outcomes?: Json
+          policy_id?: string | null
+          policy_version?: number | null
+          result: string
+          user_id: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          outcomes?: Json
+          policy_id?: string | null
+          policy_version?: number | null
+          result?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_evaluations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_evaluations_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "landlord_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      policy_rules: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          policy_id: string
+          rule_type: string
+          version: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          policy_id: string
+          rule_type: string
+          version?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          policy_id?: string
+          rule_type?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_rules_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "landlord_policies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       privacy_requests: {
         Row: {
