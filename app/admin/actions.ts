@@ -3,12 +3,13 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdminUser } from '@/lib/data/admin'
 import { logAdminAudit } from '@/lib/auth/permissions'
+import type { Json } from '@/lib/supabase/database.types'
 import type { AppRole, ListingStatus } from '@/lib/types'
 
 const USER_ROLES: AppRole[] = ['seeker', 'buyer', 'landlord', 'broker', 'company_admin', 'admin', 'super_admin']
 const LISTING_STATUSES: ListingStatus[] = ['draft', 'published', 'paused', 'rented', 'sold', 'archived']
 
-async function logAdminAction(action: string, targetType: string, targetId: string | null, metadata: Record<string, unknown> = {}) {
+async function logAdminAction(action: string, targetType: string, targetId: string | null, metadata: Json = {}) {
   const { supabase, user } = await requireAdminUser()
   await logAdminAudit(supabase, {
     adminUserId: user.id,

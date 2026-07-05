@@ -23,7 +23,8 @@ export async function checkRateLimit(supabase: SupabaseServerClient, params: Rat
   const { data, error } = await supabase.rpc('check_rate_limit', {
     input_scope: params.scope,
     input_subject_hash: subjectHash,
-    input_ip_hash: ipHash,
+    // The SQL function accepts null; the generated arg type is non-nullable.
+    input_ip_hash: ipHash as string,
     input_limit: params.limit,
     input_window_seconds: params.windowSeconds,
   })

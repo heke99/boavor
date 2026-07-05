@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import type { Json } from '@/lib/supabase/database.types'
 import type { AppRole } from '@/lib/types'
 
 type SupabaseServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>
@@ -168,7 +169,7 @@ export async function assertCanManageListing(context: AuthContext, listingId: st
 
 export async function logAdminAudit(
   supabase: SupabaseServerClient,
-  params: { adminUserId: string; action: string; targetType: string; targetId?: string | null; metadata?: Record<string, unknown> },
+  params: { adminUserId: string; action: string; targetType: string; targetId?: string | null; metadata?: Json },
 ) {
   await supabase.from('admin_audit_logs').insert({
     admin_user_id: params.adminUserId,

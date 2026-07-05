@@ -21,6 +21,7 @@ import {
   StorageType,
 } from '@/lib/types'
 import { getDefaultPropertyType } from '@/lib/listing-options'
+import type { Json } from '@/lib/supabase/database.types'
 
 function slugify(input: string) {
   return input
@@ -338,7 +339,7 @@ async function userCanManageListing(supabase: Awaited<ReturnType<typeof createSu
 
 async function logListingActivity(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  params: { listingId: string; actorUserId: string; eventType: string; message: string; payload?: Record<string, unknown> },
+  params: { listingId: string; actorUserId: string; eventType: string; message: string; payload?: Json },
 ) {
   if (!supabase) return
   await supabase.from('listing_activity_events').insert({

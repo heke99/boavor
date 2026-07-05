@@ -10,25 +10,18 @@ cp .env.example .env.local
 npm run dev
 ```
 
-## SQL
-Kör SQL-filerna i Supabase SQL Editor i denna ordning för en komplett miljö:
+## Databas
 
-1. `supabase/schema.sql`
-2. `supabase/phase4_profile_queue.sql`
-3. `supabase/phase10_12_13.sql`
-4. `supabase/phase_register_system.sql`
-5. `supabase/phase_commercial_marketplace.sql`
-6. `supabase/phase_dynamic_search.sql`
-7. `supabase/phase_dashboard_leads.sql`
-8. `supabase/phase_dashboard_foundation.sql`
-9. `supabase/phase_listing_detail_management.sql`
-10. `supabase/phase_admin_dashboard.sql`
-11. `supabase/phase_public_listing_flows.sql`
-12. `supabase/phase_permissions_security_hardening.sql`
-13. `supabase/production_go_live.sql`
-14. `supabase/production_polish.sql`
+Schemat hanteras via ordnade migrationsfiler i `supabase/migrations/` — se
+`supabase/migrations/README.md` för index, regler och bootstrap-instruktioner.
 
-`supabase/phase_demo_seed_data.sql` är endast för demo/staging och ska inte köras i produktion.
+De gamla fas-filerna är arkiverade i `supabase/archive/` och får inte köras.
+
+Efter varje migration, regenerera databastyperna:
+
+```bash
+npx supabase gen types typescript --project-id <project-id> --schema public > lib/supabase/database.types.ts
+```
 
 ## Produktion
 
@@ -36,7 +29,7 @@ Minimikrav före go-live:
 
 - sätt `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL` och `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - konfigurera Supabase Auth redirect URLs för `/auth/callback`
-- kör SQL-ordningen ovan och verifiera Storage-buckets `listing-images` och `profile-documents` samt readiness/rate-limit-funktioner
+- kör migrationerna i `supabase/migrations/` och verifiera Storage-buckets `listing-images` och `profile-documents` samt readiness/rate-limit-funktioner
 - aktivera CI: `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=moderate`
 - konfigurera e-post, betalning, monitoring och rate limit enligt `.env.example`
 - verifiera `/api/health`, `/robots.txt` och `/sitemap.xml` efter deploy

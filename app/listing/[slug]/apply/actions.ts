@@ -38,28 +38,32 @@ export async function submitRentalApplication(formData: FormData) {
     .eq('slug', listing.slug)
     .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
 
-  if (owner?.id) {
-    const { data: existingApplication } = await supabase
-      .from('rental_applications')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('listing_id', owner.id)
-      .neq('status', 'withdrawn')
-      .limit(1)
-      .maybeSingle<{ id: string }>()
+  // listing_id is NOT NULL in the database; without an owning listing row the
+  // application cannot be stored.
+  if (!owner?.id) {
+    redirect(`/listing/${slug}/apply?error=failed`)
+  }
 
-    if (existingApplication) {
-      redirect('/dashboard/applications?duplicate=1')
-    }
+  const { data: existingApplication } = await supabase
+    .from('rental_applications')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('listing_id', owner.id)
+    .neq('status', 'withdrawn')
+    .limit(1)
+    .maybeSingle<{ id: string }>()
+
+  if (existingApplication) {
+    redirect('/dashboard/applications?duplicate=1')
   }
 
   const { data: created, error } = await supabase
     .from('rental_applications')
     .insert({
       user_id: user.id,
-      listing_id: owner?.id ?? null,
-      landlord_user_id: owner?.created_by ?? null,
-      landlord_company_id: owner?.company_id ?? null,
+      listing_id: owner.id,
+      landlord_user_id: owner.created_by ?? null,
+      landlord_company_id: owner.company_id ?? null,
       listing_slug: listing.slug,
       listing_title: listing.title,
       listing_city: listing.city,

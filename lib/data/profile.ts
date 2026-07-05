@@ -69,15 +69,14 @@ type SubscriptionRow = {
 
 type CompanyMembershipRow = {
   role: AppRole
-  companies:
-    | {
-        id: string
-        name: string
-        slug: string
-        company_type: CompanyType | null
-        legal_form: LegalForm | null
-      }[]
-    | null
+  // company_members -> companies is many-to-one, so PostgREST embeds a single object.
+  companies: {
+    id: string
+    name: string
+    slug: string
+    company_type: CompanyType | null
+    legal_form: LegalForm | null
+  } | null
 }
 
 function addMonths(dateString: string, months: number) {
@@ -260,9 +259,9 @@ export async function getDashboardProfile() {
           subscriptionStatus: subscription?.status ?? null,
         }
       : null,
-    companies: ((companyMemberships ?? []) as CompanyMembershipRow[])
+    companies: ((companyMemberships ?? []) as unknown as CompanyMembershipRow[])
       .map((item) => {
-        const company = item.companies?.[0] ?? null
+        const company = item.companies
         if (!company) return null
 
         return {

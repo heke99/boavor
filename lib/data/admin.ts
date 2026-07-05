@@ -234,8 +234,8 @@ export async function getAdminListings(params: { q?: string; segment?: string; s
     .order('created_at', { ascending: false })
 
   if (params.q) query = query.or(`title.ilike.${like(params.q)},city.ilike.${like(params.q)}`)
-  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment)
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment as ListingSegment)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as ListingStatus)
   if (params.ownerType === 'company') query = query.not('company_id', 'is', null)
   if (params.ownerType === 'private') query = query.is('company_id', null)
 
@@ -298,7 +298,7 @@ export async function getAdminApplications(params: { q?: string; status?: string
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as RentalApplicationStatus)
 
   const { data, error } = await query
   if (error) {
@@ -351,8 +351,8 @@ export async function getAdminInquiries(params: { q?: string; status?: string; s
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
-  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as InquiryStatus)
+  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment as ListingSegment)
 
   const { data, error } = await query
   if (error) {

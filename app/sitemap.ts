@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { getPublishedListings } from '@/lib/data/listings'
+import { hasSupabaseEnv } from '@/lib/supabase/env'
 import { getSiteUrl } from '@/lib/url'
 
 const staticRoutes = [
@@ -15,10 +16,27 @@ const staticRoutes = [
   '/queue-terms',
 ]
 
+// Static generation must never hang on a slow or unreachable database.
+const LISTINGS_FETCH_TIMEOUT_MS = 10_000
+
+async function getListingsForSitemap() {
+  if (!hasSupabaseEnv()) return []
+
+  try {
+    const timeout = new Promise<[]>((resolve) => {
+      setTimeout(() => resolve([]), LISTINGS_FETCH_TIMEOUT_MS)
+    })
+    return await Promise.race([getPublishedListings({}, { limit: 500 }), timeout])
+  } catch (error) {
+    console.error('Sitemap listing fetch failed', error)
+    return []
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl()
   const now = new Date()
-  const listings = await getPublishedListings({}, { limit: 500 })
+  const listings = await getListingsForSitemap()
 
   return [
     ...staticRoutes.map((route) => ({

@@ -90,13 +90,15 @@ type ListingRow = {
   listing_features?: Array<{
     feature_label: string
   }>
-  rental_requirements?: Array<{
+  // listings -> rental_requirements is one-to-one (listing_id is PK+FK), so
+  // PostgREST embeds a single object.
+  rental_requirements?: {
     min_income: number | null
     pets_allowed: boolean
     smoking_allowed: boolean
     references_required: boolean
     employment_required: boolean
-  }>
+  } | null
 }
 
 const FALLBACK_IMAGE =
@@ -183,7 +185,7 @@ function mapListingCard(row: ListingRow): ListingCardItem {
 }
 
 function mapListingDetail(row: ListingRow): ListingDetailItem {
-  const rentalRequirement = row.rental_requirements?.[0] ?? null
+  const rentalRequirement = row.rental_requirements ?? null
 
   return {
     ...mapListingCard(row),
