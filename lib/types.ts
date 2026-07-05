@@ -183,6 +183,8 @@ export type SavedSearchItem = {
   createdAt: string
 }
 
+export type CoApplicantInviteStatus = 'none' | 'invited' | 'accepted' | 'declined'
+
 export type CoApplicantItem = {
   id: string
   fullName: string
@@ -190,16 +192,32 @@ export type CoApplicantItem = {
   phone: string | null
   relationship: string | null
   createdAt: string
+  inviteStatus?: CoApplicantInviteStatus
+  inviteToken?: string | null
+  consentedAt?: string | null
 }
+
+export type GuarantorItem = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  relationship: string | null
+  monthlyIncome: number | null
+  createdAt: string
+}
+
+export type ProfileDocumentStatus = 'active' | 'expired' | 'replaced' | 'rejected' | 'pending_review'
 
 export type ProfileDocumentItem = {
   id: string
   fileName: string
   fileUrl: string
   documentType: string
-  documentStatus?: 'active' | 'expired' | 'replaced'
+  documentStatus?: ProfileDocumentStatus
   documentExpiresAt?: string | null
   isDefaultForApplications?: boolean
+  rejectionReason?: string | null
   createdAt: string
 }
 
@@ -239,12 +257,19 @@ export type DashboardProfileItem = {
   city: string
   householdSize: number | null
   hasPets: boolean
+  smoking?: boolean
   employmentStatus: string
   employerName: string
   monthlyIncome: number | null
+  incomeType?: string | null
+  studyStatus?: string | null
+  currentHousingSituation?: string | null
+  personalLetter?: string | null
+  guarantorAvailable?: boolean
   desiredMoveIn: string | null
   desiredLocations: string[]
   coApplicants: CoApplicantItem[]
+  guarantors?: GuarantorItem[]
   documents: ProfileDocumentItem[]
   queueMembership: QueueMembershipItem | null
   companies: CompanyMembershipItem[]

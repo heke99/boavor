@@ -93,32 +93,85 @@ export type Database = {
         }
         Relationships: []
       }
+      application_profile_snapshots: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          snapshot: Json
+          snapshot_version: number
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          snapshot: Json
+          snapshot_version?: number
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          snapshot?: Json
+          snapshot_version?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_profile_snapshots_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       co_applicants: {
         Row: {
+          accepted_at: string | null
+          consented_at: string | null
           created_at: string
           email: string | null
           full_name: string
           id: string
+          invite_status: string
+          invite_token: string | null
+          invited_at: string | null
+          invited_user_id: string | null
           phone: string | null
           relationship: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          accepted_at?: string | null
+          consented_at?: string | null
           created_at?: string
           email?: string | null
           full_name: string
           id?: string
+          invite_status?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_user_id?: string | null
           phone?: string | null
           relationship?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          accepted_at?: string | null
+          consented_at?: string | null
           created_at?: string
           email?: string | null
           full_name?: string
           id?: string
+          invite_status?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          invited_user_id?: string | null
           phone?: string | null
           relationship?: string | null
           updated_at?: string
@@ -275,6 +328,41 @@ export type Database = {
           },
         ]
       }
+      document_reviews: {
+        Row: {
+          created_at: string
+          decision: string
+          document_id: string
+          id: string
+          reason: string | null
+          reviewer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          document_id: string
+          id?: string
+          reason?: string | null
+          reviewer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          document_id?: string
+          id?: string
+          reason?: string | null
+          reviewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_reviews_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "profile_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -303,6 +391,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      guarantors: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          monthly_income: number | null
+          note: string | null
+          phone: string | null
+          relationship: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          monthly_income?: number | null
+          note?: string | null
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          monthly_income?: number | null
+          note?: string | null
+          phone?: string | null
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       identity_verification_events: {
         Row: {
@@ -981,6 +1108,9 @@ export type Database = {
           file_url: string
           id: string
           is_default_for_applications: boolean
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           updated_at: string
           user_id: string
         }
@@ -993,6 +1123,9 @@ export type Database = {
           file_url: string
           id?: string
           is_default_for_applications?: boolean
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1005,6 +1138,9 @@ export type Database = {
           file_url?: string
           id?: string
           is_default_for_applications?: boolean
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1016,25 +1152,32 @@ export type Database = {
           avatar_url: string | null
           city: string | null
           created_at: string
+          current_housing_situation: string | null
           desired_locations: string[] | null
           desired_move_in: string | null
           employer_name: string | null
           employment_status: string | null
           first_name: string | null
+          guarantor_available: boolean
           has_pets: boolean
           household_size: number | null
           id: string
           identity_verified_at: string | null
+          income_type: string | null
           last_name: string | null
           marketing_consent: boolean
           monthly_income: number | null
           onboarding_completed: boolean
           personal_identity_consent_at: string | null
           personal_identity_number: string | null
+          personal_letter: string | null
           phone: string | null
+          phone_verified_at: string | null
           preferred_listing_intent: string
           privacy_accepted_at: string | null
           role: Database["public"]["Enums"]["app_role"]
+          smoking: boolean
+          study_status: string | null
           terms_accepted_at: string | null
           updated_at: string
         }
@@ -1043,25 +1186,32 @@ export type Database = {
           avatar_url?: string | null
           city?: string | null
           created_at?: string
+          current_housing_situation?: string | null
           desired_locations?: string[] | null
           desired_move_in?: string | null
           employer_name?: string | null
           employment_status?: string | null
           first_name?: string | null
+          guarantor_available?: boolean
           has_pets?: boolean
           household_size?: number | null
           id: string
           identity_verified_at?: string | null
+          income_type?: string | null
           last_name?: string | null
           marketing_consent?: boolean
           monthly_income?: number | null
           onboarding_completed?: boolean
           personal_identity_consent_at?: string | null
           personal_identity_number?: string | null
+          personal_letter?: string | null
           phone?: string | null
+          phone_verified_at?: string | null
           preferred_listing_intent?: string
           privacy_accepted_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          smoking?: boolean
+          study_status?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
         }
@@ -1070,25 +1220,32 @@ export type Database = {
           avatar_url?: string | null
           city?: string | null
           created_at?: string
+          current_housing_situation?: string | null
           desired_locations?: string[] | null
           desired_move_in?: string | null
           employer_name?: string | null
           employment_status?: string | null
           first_name?: string | null
+          guarantor_available?: boolean
           has_pets?: boolean
           household_size?: number | null
           id?: string
           identity_verified_at?: string | null
+          income_type?: string | null
           last_name?: string | null
           marketing_consent?: boolean
           monthly_income?: number | null
           onboarding_completed?: boolean
           personal_identity_consent_at?: string | null
           personal_identity_number?: string | null
+          personal_letter?: string | null
           phone?: string | null
+          phone_verified_at?: string | null
           preferred_listing_intent?: string
           privacy_accepted_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          smoking?: boolean
+          study_status?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
         }
@@ -1922,6 +2079,20 @@ export type Database = {
           p_status: Database["public"]["Enums"]["identity_verification_status"]
           p_verification_id: string
         }
+        Returns: Json
+      }
+      get_co_applicant_invite: {
+        Args: { p_token: string }
+        Returns: {
+          full_name: string
+          id: string
+          invite_status: string
+          inviter_name: string
+          relationship: string
+        }[]
+      }
+      respond_co_applicant_invite: {
+        Args: { p_accept: boolean; p_token: string }
         Returns: Json
       }
       storage_bucket_exists: { Args: { bucket_name: string }; Returns: boolean }

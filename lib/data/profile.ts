@@ -2,10 +2,12 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { parseStorageUri } from '@/lib/storage'
 import type {
   AppRole,
+  CoApplicantItem,
   CompanyMembershipItem,
   CompanyType,
   DashboardProfileItem,
   LegalForm,
+  ProfileDocumentItem,
   QueueMembershipItem,
   SubscriptionStatus,
 } from '@/lib/types'
@@ -26,9 +28,15 @@ type ProfileRow = {
   city: string | null
   household_size: number | null
   has_pets: boolean
+  smoking?: boolean | null
   employment_status: string | null
   employer_name: string | null
   monthly_income: number | null
+  income_type?: string | null
+  study_status?: string | null
+  current_housing_situation?: string | null
+  personal_letter?: string | null
+  guarantor_available?: boolean | null
   desired_move_in: string | null
   desired_locations: string[] | null
 }
@@ -40,6 +48,19 @@ type CoApplicantRow = {
   phone: string | null
   relationship: string | null
   created_at: string
+  invite_status?: string | null
+  invite_token?: string | null
+  consented_at?: string | null
+}
+
+type GuarantorRow = {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  relationship: string | null
+  monthly_income: number | null
+  created_at: string
 }
 
 type ProfileDocumentRow = {
@@ -47,9 +68,10 @@ type ProfileDocumentRow = {
   file_name: string
   file_url: string
   document_type: string
-  document_status?: 'active' | 'expired' | 'replaced' | null
+  document_status?: string | null
   document_expires_at?: string | null
   is_default_for_applications?: boolean | null
+  rejection_reason?: string | null
   created_at: string
 }
 
@@ -171,20 +193,26 @@ export async function getDashboardProfile() {
   const { data: profileRow } = await supabase
     .from('profiles')
     .select(
-      'id, first_name, last_name, phone, role, account_type, identity_verified_at, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
+      'id, first_name, last_name, phone, role, account_type, identity_verified_at, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, smoking, employment_status, employer_name, monthly_income, income_type, study_status, current_housing_situation, personal_letter, guarantor_available, desired_move_in, desired_locations',
     )
     .eq('id', user.id)
     .maybeSingle<ProfileRow>()
 
   const { data: coApplicants } = await supabase
     .from('co_applicants')
-    .select('id, full_name, email, phone, relationship, created_at')
+    .select('id, full_name, email, phone, relationship, created_at, invite_status, invite_token, consented_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  const { data: guarantors } = await supabase
+    .from('guarantors')
+    .select('id, full_name, email, phone, relationship, monthly_income, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   const { data: documents } = await supabase
     .from('profile_documents')
-    .select('id, file_name, file_url, document_type, document_status, document_expires_at, is_default_for_applications, created_at')
+    .select('id, file_name, file_url, document_type, document_status, document_expires_at, is_default_for_applications, rejection_reason, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -225,9 +253,15 @@ export async function getDashboardProfile() {
     city: profileRow?.city ?? '',
     householdSize: profileRow?.household_size ?? null,
     hasPets: profileRow?.has_pets ?? false,
+    smoking: profileRow?.smoking ?? false,
     employmentStatus: profileRow?.employment_status ?? 'employed',
     employerName: profileRow?.employer_name ?? '',
     monthlyIncome: profileRow?.monthly_income ?? null,
+    incomeType: profileRow?.income_type ?? null,
+    studyStatus: profileRow?.study_status ?? null,
+    currentHousingSituation: profileRow?.current_housing_situation ?? null,
+    personalLetter: profileRow?.personal_letter ?? null,
+    guarantorAvailable: profileRow?.guarantor_available ?? false,
     desiredMoveIn: profileRow?.desired_move_in ?? null,
     desiredLocations: profileRow?.desired_locations ?? [],
     coApplicants: ((coApplicants ?? []) as CoApplicantRow[]).map((item) => ({
@@ -237,15 +271,28 @@ export async function getDashboardProfile() {
       phone: item.phone,
       relationship: item.relationship,
       createdAt: item.created_at,
+      inviteStatus: (item.invite_status ?? 'none') as CoApplicantItem['inviteStatus'],
+      inviteToken: item.invite_token ?? null,
+      consentedAt: item.consented_at ?? null,
+    })),
+    guarantors: ((guarantors ?? []) as GuarantorRow[]).map((item) => ({
+      id: item.id,
+      fullName: item.full_name,
+      email: item.email,
+      phone: item.phone,
+      relationship: item.relationship,
+      monthlyIncome: item.monthly_income,
+      createdAt: item.created_at,
     })),
     documents: ((documents ?? []) as ProfileDocumentRow[]).map((item) => ({
       id: item.id,
       fileName: item.file_name,
       fileUrl: parseStorageUri(item.file_url) ? `/dashboard/documents/${item.id}/view` : item.file_url,
       documentType: item.document_type,
-      documentStatus: item.document_status ?? 'active',
+      documentStatus: (item.document_status ?? 'active') as ProfileDocumentItem['documentStatus'],
       documentExpiresAt: item.document_expires_at ?? null,
       isDefaultForApplications: item.is_default_for_applications ?? false,
+      rejectionReason: item.rejection_reason ?? null,
       createdAt: item.created_at,
     })),
     queueMembership: membership

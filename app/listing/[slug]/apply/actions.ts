@@ -116,6 +116,22 @@ export async function submitRentalApplication(formData: FormData) {
     await recordConsent(supabase, { userId: user.id, consentType: 'document_sharing', source: 'apply' })
   }
 
+  // Immutable snapshot of the applicant profile at submission time. Future
+  // profile edits must never mutate what the landlord saw.
+  await supabase.from('application_profile_snapshots').insert({
+    application_id: created.id,
+    user_id: user.id,
+    snapshot_version: 1,
+    snapshot: JSON.parse(
+      JSON.stringify({
+        profile,
+        selected_co_applicant_ids: selectedCoApplicants,
+        selected_document_ids: selectedDocuments,
+        submitted_at: new Date().toISOString(),
+      }),
+    ),
+  })
+
   if (selectedCoApplicants.length > 0) {
     const { data: coApplicants } = await supabase
       .from('co_applicants')

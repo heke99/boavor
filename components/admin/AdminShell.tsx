@@ -17,6 +17,7 @@ const navItems = [
   { href: '/admin', label: 'Översikt', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Användare', icon: Users },
   { href: '/admin/identity', label: 'Identitet', icon: Fingerprint },
+  { href: '/admin/documents', label: 'Dokument', icon: FileText },
   { href: '/admin/companies', label: 'Företag', icon: Building2 },
   { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },

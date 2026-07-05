@@ -54,9 +54,15 @@ export async function saveProfileAction(formData: FormData) {
     marketing_consent: formData.get('marketingConsent') === 'on',
     household_size: Number(formData.get('householdSize') ?? 1) || null,
     has_pets: formData.get('hasPets') === 'on',
+    smoking: formData.get('smoking') === 'on',
     employment_status: String(formData.get('employmentStatus') ?? '').trim(),
     employer_name: String(formData.get('employerName') ?? '').trim(),
     monthly_income: Number(formData.get('monthlyIncome') ?? 0) || null,
+    income_type: String(formData.get('incomeType') ?? '').trim() || null,
+    study_status: String(formData.get('studyStatus') ?? '').trim() || null,
+    current_housing_situation: String(formData.get('currentHousingSituation') ?? '').trim() || null,
+    personal_letter: String(formData.get('personalLetter') ?? '').trim() || null,
+    guarantor_available: formData.get('guarantorAvailable') === 'on',
     desired_move_in: String(formData.get('desiredMoveIn') ?? '').trim() || null,
     desired_locations: desiredLocations,
   })
@@ -158,6 +164,65 @@ export async function removeCoApplicantAction(formData: FormData) {
   revalidatePath('/dashboard/profile')
 }
 
+export async function inviteCoApplicantAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const id = String(formData.get('id') ?? '')
+  if (!id) return
+
+  const { data: coApplicant } = await supabase
+    .from('co_applicants')
+    .select('id, invite_status')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!coApplicant || coApplicant.invite_status === 'accepted') return
+
+  await supabase
+    .from('co_applicants')
+    .update({
+      invite_status: 'invited',
+      invite_token: randomUUID(),
+      invited_at: new Date().toISOString(),
+      invited_user_id: null,
+      accepted_at: null,
+      consented_at: null,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  revalidatePath('/dashboard/profile')
+}
+
+export async function addGuarantorAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+
+  const fullName = String(formData.get('fullName') ?? '').trim()
+  if (!fullName) return
+
+  await supabase.from('guarantors').insert({
+    user_id: user.id,
+    full_name: fullName,
+    email: String(formData.get('email') ?? '').trim() || null,
+    phone: String(formData.get('phone') ?? '').trim() || null,
+    relationship: String(formData.get('relationship') ?? '').trim() || null,
+    monthly_income: Number(formData.get('monthlyIncome') ?? 0) || null,
+  })
+
+  await supabase.from('profiles').update({ guarantor_available: true }).eq('id', user.id)
+
+  revalidatePath('/dashboard/profile')
+}
+
+export async function removeGuarantorAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const id = String(formData.get('id') ?? '')
+  if (!id) return
+
+  await supabase.from('guarantors').delete().eq('id', id).eq('user_id', user.id)
+  revalidatePath('/dashboard/profile')
+}
+
 export async function addProfileDocumentAction(formData: FormData) {
   const { supabase, user } = await requireUser()
 
@@ -199,17 +264,30 @@ export async function addProfileDocumentAction(formData: FormData) {
 
   if (!fileName || !fileUrl) return
 
+  const replacesDocumentId = String(formData.get('replacesDocumentId') ?? '').trim()
+
   await supabase.from('profile_documents').insert({
     user_id: user.id,
     file_name: fileName,
     file_url: fileUrl,
     document_type: String(formData.get('documentType') ?? 'general').trim() || 'general',
-    document_status: 'active',
+    // New documents await review; they remain usable in applications meanwhile.
+    document_status: 'pending_review',
     document_expires_at: String(formData.get('documentExpiresAt') ?? '').trim() || null,
     is_default_for_applications: formData.get('isDefaultForApplications') === 'on',
   })
 
+  // Resubmission: mark the replaced document accordingly.
+  if (replacesDocumentId) {
+    await supabase
+      .from('profile_documents')
+      .update({ document_status: 'replaced' })
+      .eq('id', replacesDocumentId)
+      .eq('user_id', user.id)
+  }
+
   revalidatePath('/dashboard/profile')
+  revalidatePath('/dashboard/documents')
 }
 
 export async function removeProfileDocumentAction(formData: FormData) {
