@@ -44,7 +44,9 @@ export default async function ApplyPage({ params, searchParams }: Props) {
               ? `Du har nått gränsen för aktiva ansökningar (${limitCheck.limit} st). Återkalla en ansökan eller vänta tills en avslutas.`
               : errorCode === 'deadline_passed'
                 ? 'Ansökningstiden för den här bostaden har gått ut.'
-                : null
+                : errorCode === 'maintenance'
+                  ? 'Bovaro underhålls just nu och tar tillfälligt inte emot nya ansökningar. Försök igen om en stund.'
+                  : null
 
   if (!identity.isVerified || !identity.isAdult) {
     return (

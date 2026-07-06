@@ -81,5 +81,15 @@ export async function sendTemplatedEmail<K extends EmailTemplateKey>(
     error: result.ok ? null : result.error,
   })
 
+  // Surface delivery failures on the ops dashboard (no recipient PII).
+  if (!result.ok) {
+    await supabase.from('integration_failures').insert({
+      integration: 'resend',
+      operation: `send:${params.templateKey}`,
+      error: result.error.slice(0, 500),
+      context: { template_key: params.templateKey },
+    })
+  }
+
   return { status }
 }

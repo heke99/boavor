@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoutButton } from '@/components/auth/LogoutButton'
@@ -44,6 +45,7 @@ const navItems = [
   { href: '/admin/risk', label: 'Riskflaggor', icon: ShieldAlert },
   { href: '/admin/privacy', label: 'GDPR', icon: FileText },
   { href: '/admin/settings', label: 'Inställningar', icon: Settings },
+  { href: '/admin/ops', label: 'Drift', icon: Wrench },
   { href: '/admin/system', label: 'System', icon: Activity },
 ]
 

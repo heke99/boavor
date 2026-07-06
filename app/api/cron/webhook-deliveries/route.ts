@@ -100,6 +100,16 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', delivery.id)
 
+      // Dead letters surface on the ops dashboard for manual retry.
+      if (!retryAt) {
+        await supabase.from('integration_failures').insert({
+          integration: 'webhook',
+          operation: `deliver:${delivery.event_type}`,
+          error: errorMessage.slice(0, 500),
+          context: { delivery_id: delivery.id, endpoint_id: endpoint.id, attempts },
+        })
+      }
+
       const { data: endpointRow } = await supabase
         .from('webhook_endpoints')
         .select('failure_count')

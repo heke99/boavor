@@ -11,6 +11,7 @@ import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/d
 import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
 import { runMatchkoll } from '@/lib/data/matchkoll'
 import { trackEvent } from '@/lib/analytics/track'
+import { getMaintenanceMode } from '@/lib/platform/maintenance'
 import { logError } from '@/lib/log'
 
 export async function submitRentalApplication(formData: FormData) {
@@ -25,6 +26,12 @@ export async function submitRentalApplication(formData: FormData) {
   const pets = formData.get('pets') === 'on'
   const smoking = formData.get('smoking') === 'on'
   const dataSharingConsent = formData.get('dataSharingConsent') === 'on'
+
+  // Maintenance mode closes the application write flow (banner explains why).
+  const maintenance = await getMaintenanceMode()
+  if (maintenance.enabled) {
+    redirect(`/listing/${slug}/apply?error=maintenance`)
+  }
 
   const { supabase, user } = await (await import('@/lib/data/rental-applications')).requireSignedInUser()
   const { listing, profile } = await getApplyPageData(slug)

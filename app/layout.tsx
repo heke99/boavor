@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { PwaRegister } from '@/components/pwa/PwaRegister'
+import { MaintenanceBanner } from '@/components/platform/MaintenanceBanner'
 import { getSiteUrl } from '@/lib/url'
 
 const siteUrl = getSiteUrl()
@@ -66,6 +67,7 @@ export default function RootLayout({
   return (
     <html lang="sv" data-scroll-behavior="smooth">
       <body className="pb-16 md:pb-0">
+        <MaintenanceBanner />
         <Header />
         <main>{children}</main>
         <Footer />
