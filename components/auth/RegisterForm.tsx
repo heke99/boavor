@@ -22,11 +22,6 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, '')
 }
 
-function validateSwedishPersonalIdentityNumber(value: string) {
-  const digits = onlyDigits(value)
-  return digits.length === 10 || digits.length === 12
-}
-
 function validateOrganizationNumber(value: string) {
   const digits = onlyDigits(value)
   return digits.length === 10
@@ -40,6 +35,11 @@ function createSlug(value: string) {
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+}
+
+function ErrorText({ errors, id }: { errors: RegisterErrors; id: string }) {
+  if (!errors[id]) return null
+  return <p className="mt-2 text-sm font-medium text-[#dc2626]">{errors[id]}</p>
 }
 
 export function RegisterForm() {
@@ -98,17 +98,9 @@ export function RegisterForm() {
     } else {
       const firstName = String(formData.get('firstName') ?? '').trim()
       const lastName = String(formData.get('lastName') ?? '').trim()
-      const personalIdentityNumber = String(formData.get('personalIdentityNumber') ?? '').trim()
-      const personalIdentityConsent = formData.get('personalIdentityConsent') === 'on'
 
       if (!firstName) nextErrors.firstName = 'Ange förnamn.'
       if (!lastName) nextErrors.lastName = 'Ange efternamn.'
-      if (!validateSwedishPersonalIdentityNumber(personalIdentityNumber)) {
-        nextErrors.personalIdentityNumber = 'Ange personnummer med 10 eller 12 siffror.'
-      }
-      if (!personalIdentityConsent) {
-        nextErrors.personalIdentityConsent = 'Du måste godkänna behandling av personnummer.'
-      }
     }
 
     setErrors(nextErrors)
@@ -134,11 +126,13 @@ export function RegisterForm() {
     const organizationNumber = String(formData.get('organizationNumber') ?? '').trim()
     const companySlug = companyName ? `${createSlug(companyName)}-${Date.now().toString(36)}` : null
 
+    const onboardingPath = isCompany ? '/landlord/onboarding' : '/dashboard/profile?onboarding=1'
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(onboardingPath)}`,
         data: {
           account_type: accountType,
           first_name: firstName,
@@ -146,8 +140,6 @@ export function RegisterForm() {
           phone,
           city: String(formData.get('city') ?? '').trim(),
           preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both'),
-          personal_identity_number: isCompany ? null : String(formData.get('personalIdentityNumber') ?? '').trim(),
-          personal_identity_consent: !isCompany,
           marketing_consent: formData.get('marketingConsent') === 'on',
           terms_accepted: true,
           privacy_accepted: true,
@@ -176,11 +168,6 @@ export function RegisterForm() {
     setStatus('success')
     setMessage('Kontot är skapat. Kontrollera din e-post om verifiering krävs, annars kan du logga in direkt.')
     form.reset()
-  }
-
-  function ErrorText({ id }: { id: string }) {
-    if (!errors[id]) return null
-    return <p className="mt-2 text-sm font-medium text-[#dc2626]">{errors[id]}</p>
   }
 
   return (
@@ -232,7 +219,7 @@ export function RegisterForm() {
             <div className="md:col-span-2">
               <label className={labelClass}>E-post</label>
               <Input name="email" type="email" autoComplete="email" placeholder="namn@email.se" className={inputClass} />
-              <ErrorText id="email" />
+              <ErrorText errors={errors} id="email" />
             </div>
             <div>
               <label className={labelClass}>Lösenord</label>
@@ -253,7 +240,7 @@ export function RegisterForm() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <ErrorText id="password" />
+              <ErrorText errors={errors} id="password" />
             </div>
             <div>
               <label className={labelClass}>Bekräfta lösenord</label>
@@ -264,7 +251,7 @@ export function RegisterForm() {
                 placeholder="Upprepa lösenord"
                 className={inputClass}
               />
-              <ErrorText id="confirmPassword" />
+              <ErrorText errors={errors} id="confirmPassword" />
             </div>
           </div>
         </div>
@@ -278,12 +265,12 @@ export function RegisterForm() {
               <div>
                 <label className={labelClass}>Företagsnamn</label>
                 <Input name="companyName" placeholder="Exempel AB" className={inputClass} />
-                <ErrorText id="companyName" />
+                <ErrorText errors={errors} id="companyName" />
               </div>
               <div>
                 <label className={labelClass}>Organisationsnummer</label>
                 <Input name="organizationNumber" placeholder="559000-0000" className={inputClass} />
-                <ErrorText id="organizationNumber" />
+                <ErrorText errors={errors} id="organizationNumber" />
               </div>
               <div>
                 <label className={labelClass}>Företagsmejl</label>
@@ -313,17 +300,17 @@ export function RegisterForm() {
               <div>
                 <label className={labelClass}>Kontaktperson förnamn</label>
                 <Input name="contactFirstName" placeholder="Förnamn" className={inputClass} />
-                <ErrorText id="contactFirstName" />
+                <ErrorText errors={errors} id="contactFirstName" />
               </div>
               <div>
                 <label className={labelClass}>Kontaktperson efternamn</label>
                 <Input name="contactLastName" placeholder="Efternamn" className={inputClass} />
-                <ErrorText id="contactLastName" />
+                <ErrorText errors={errors} id="contactLastName" />
               </div>
               <div>
                 <label className={labelClass}>Kontaktperson telefon</label>
                 <Input name="phone" placeholder="070-000 00 00" className={inputClass} />
-                <ErrorText id="phone" />
+                <ErrorText errors={errors} id="phone" />
               </div>
               <div>
                 <label className={labelClass}>Stad</label>
@@ -340,25 +327,17 @@ export function RegisterForm() {
               <div>
                 <label className={labelClass}>Förnamn</label>
                 <Input name="firstName" autoComplete="given-name" placeholder="Förnamn" className={inputClass} />
-                <ErrorText id="firstName" />
+                <ErrorText errors={errors} id="firstName" />
               </div>
               <div>
                 <label className={labelClass}>Efternamn</label>
                 <Input name="lastName" autoComplete="family-name" placeholder="Efternamn" className={inputClass} />
-                <ErrorText id="lastName" />
-              </div>
-              <div>
-                <label className={labelClass}>Personnummer</label>
-                <Input name="personalIdentityNumber" placeholder="ÅÅÅÅMMDD-XXXX" className={inputClass} />
-                <ErrorText id="personalIdentityNumber" />
-                <p className="mt-2 text-xs leading-5 text-[#6b7280]">
-                  Används för identifiering och bostadsansökningar. Visas inte publikt.
-                </p>
+                <ErrorText errors={errors} id="lastName" />
               </div>
               <div>
                 <label className={labelClass}>Telefonnummer</label>
                 <Input name="phone" autoComplete="tel" placeholder="070-000 00 00" className={inputClass} />
-                <ErrorText id="phone" />
+                <ErrorText errors={errors} id="phone" />
               </div>
               <div>
                 <label className={labelClass}>Stad</label>
@@ -392,7 +371,7 @@ export function RegisterForm() {
                 .
               </span>
             </label>
-            <ErrorText id="termsAccepted" />
+            <ErrorText errors={errors} id="termsAccepted" />
 
             <label className="flex gap-3">
               <input name="privacyAccepted" type="checkbox" className="mt-1 h-4 w-4 accent-[#5b3df5]" />
@@ -404,19 +383,13 @@ export function RegisterForm() {
                 .
               </span>
             </label>
-            <ErrorText id="privacyAccepted" />
+            <ErrorText errors={errors} id="privacyAccepted" />
 
             {!isCompany ? (
-              <>
-                <label className="flex gap-3">
-                  <input name="personalIdentityConsent" type="checkbox" className="mt-1 h-4 w-4 accent-[#5b3df5]" />
-                  <span>
-                    Jag samtycker till att Bovaro behandlar mitt personnummer för identifiering, profilhantering och
-                    bostadsansökningar.
-                  </span>
-                </label>
-                <ErrorText id="personalIdentityConsent" />
-              </>
+              <p className="rounded-2xl bg-[#eef2ff] px-4 py-3 text-xs leading-5 text-[#3730a3]">
+                Identitetsverifiering med personnummer görs separat efter registreringen och krävs först när du ska
+                skicka en bostadsansökan.
+              </p>
             ) : (
               <>
                 <label className="flex gap-3">
@@ -429,13 +402,13 @@ export function RegisterForm() {
                     .
                   </span>
                 </label>
-                <ErrorText id="advertiserTermsAccepted" />
+                <ErrorText errors={errors} id="advertiserTermsAccepted" />
 
                 <label className="flex gap-3">
                   <input name="representativeConfirmed" type="checkbox" className="mt-1 h-4 w-4 accent-[#5b3df5]" />
                   <span>Jag intygar att jag har rätt att företräda företaget.</span>
                 </label>
-                <ErrorText id="representativeConfirmed" />
+                <ErrorText errors={errors} id="representativeConfirmed" />
               </>
             )}
 

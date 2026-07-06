@@ -1,24 +1,37 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { getManagedListingDetail } from '@/lib/data/rental-applications'
 import { formatCurrency } from '@/lib/utils'
 import { getListingPrimaryMeta } from '@/lib/listing-options'
-import { addListingInternalNoteAction, updateApplicationStatusAction, updateInquiryStatusAction, updateListingStatusAction } from '@/app/dashboard/listings/actions'
+import { nextStatuses, statusLabel } from '@/lib/applications/status-machine'
+import { rankApplications, SELECTION_METHOD_LABELS } from '@/lib/applications/ranking'
+import { REJECTION_TEMPLATES } from '@/lib/applications/templates'
+import {
+  addListingInternalNoteAction,
+  bulkRejectApplicationsAction,
+  generateRandomOrderAction,
+  requestApplicationInfoAction,
+  updateApplicationStatusAction,
+  updateInquiryStatusAction,
+  updateListingStatusAction,
+} from '@/app/dashboard/listings/actions'
+import { startApplicationThreadAction } from '@/app/dashboard/messages/actions'
+import {
+  createContractDraftAction,
+  mockSignContractAction,
+  sendContractForSigningAction,
+  sendOfferAction,
+  withdrawOfferAction,
+} from '@/app/landlord/contracts/actions'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { resolveEsignProvider } from '@/lib/esign/provider'
+import { normalizeStatus } from '@/lib/applications/status-machine'
 
 export const dynamic = 'force-dynamic'
-
-const applicationStatusOptions = [
-  { value: 'submitted', label: 'Skickad' },
-  { value: 'reviewing', label: 'Granskas' },
-  { value: 'shortlisted', label: 'Shortlistad' },
-  { value: 'offered', label: 'Erbjuden' },
-  { value: 'rejected', label: 'Avslagen' },
-  { value: 'withdrawn', label: 'Återtagen' },
-]
 
 const inquiryStatusOptions = [
   { value: 'new', label: 'Ny' },
@@ -44,6 +57,48 @@ export default async function DashboardListingDetailPage({ params }: { params: P
   if (!listing) notFound()
 
   const meta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
+  const selectionMethod = listing.selectionMethod ?? 'manual_with_policy'
+  const rankedApplications = rankApplications(
+    selectionMethod,
+    listing.applications.map((application) => ({
+      ...application,
+      policyResult: application.policyResult ?? null,
+      randomRank: application.randomRank ?? null,
+    })),
+  )
+  const renderedAt = new Date()
+  const deadlinePassed = listing.applicationDeadlineAt
+    ? new Date(listing.applicationDeadlineAt) < renderedAt
+    : false
+  const needsRandomOrder =
+    selectionMethod === 'random' && rankedApplications.some((item) => item.application.randomRank === null)
+
+  // Offers, contracts and templates for the contract flow.
+  const supabase = await createSupabaseServerClient()
+  const applicationIds = listing.applications.map((application) => application.id)
+  const [{ data: offers }, { data: contracts }, { data: templates }] =
+    supabase && applicationIds.length
+      ? await Promise.all([
+          supabase
+            .from('rental_offers')
+            .select('id, application_id, status, message, expires_at')
+            .in('application_id', applicationIds)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('contracts')
+            .select('id, application_id, status, provider, contract_signers(id, user_id, full_name, status, signer_role)')
+            .in('application_id', applicationIds)
+            .neq('status', 'cancelled'),
+          supabase.from('contract_templates').select('id, name, version').eq('is_active', true),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }]
+
+  const latestOfferByApplication = new Map<string, NonNullable<typeof offers>[number]>()
+  for (const offer of offers ?? []) {
+    if (!latestOfferByApplication.has(offer.application_id)) latestOfferByApplication.set(offer.application_id, offer)
+  }
+  const contractByApplication = new Map((contracts ?? []).map((contract) => [contract.application_id, contract]))
+  const esignResolution = resolveEsignProvider()
 
   return (
     <DashboardShell
@@ -147,36 +202,243 @@ export default async function DashboardListingDetailPage({ params }: { params: P
 
         <div className="space-y-6">
           <Card className="p-6">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-2xl font-semibold text-[#111827]">Ansökningar</h2>
-              <div className="rounded-full bg-[#f7f8fc] px-3 py-1 text-xs font-semibold text-[#6b7280]">{listing.applications.length} st</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#4338ca]">
+                  Urval: {SELECTION_METHOD_LABELS[selectionMethod]}
+                </span>
+                <span className="rounded-full bg-[#f7f8fc] px-3 py-1 text-xs font-semibold text-[#6b7280]">{listing.applications.length} st</span>
+              </div>
             </div>
+
+            {listing.applicationDeadlineAt ? (
+              <p className="mt-2 text-sm text-[#6b7280]">
+                Sista ansökningsdag: {new Date(listing.applicationDeadlineAt).toLocaleDateString('sv-SE')}
+                {deadlinePassed ? ' (passerad — nya ansökningar blockeras)' : ''}
+              </p>
+            ) : null}
+
+            {needsRandomOrder ? (
+              <form action={generateRandomOrderAction} className="mt-4 rounded-2xl border border-dashed border-[#c7d2fe] bg-[#eef2ff] p-4">
+                <input type="hidden" name="listingId" value={listing.id} />
+                <p className="text-sm text-[#3730a3]">
+                  Urvalsmetoden är slumpad ordning. Ordningen genereras en gång efter sista ansökningsdag och loggas i
+                  aktivitetsloggen.
+                </p>
+                <Button type="submit" variant="secondary" className="mt-3" disabled={!deadlinePassed && Boolean(listing.applicationDeadlineAt)}>
+                  {deadlinePassed || !listing.applicationDeadlineAt ? 'Generera slumpordning' : 'Väntar på deadline'}
+                </Button>
+              </form>
+            ) : null}
+
             <div className="mt-5 space-y-4">
-              {listing.applications.length ? listing.applications.map((application) => (
-                <div key={application.id} className="rounded-2xl border border-[#e8ebf3] p-4">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <div className="text-lg font-semibold text-[#111827]">{application.applicant.fullName}</div>
-                      <div className="mt-1 text-sm text-[#6b7280]">{application.applicant.email} · {application.applicant.phone || 'Ingen telefon'}</div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#6b7280]">
-                        <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Score: {application.applicantScore ?? 0}/100</span>
-                        <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Köpoäng: {application.queuePointsSnapshot}</span>
-                        <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Dokument: {application.documents.length}</span>
-                        <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Inkomst: {application.applicant.monthlyIncome ? `${application.applicant.monthlyIncome} kr/mån` : 'Ej angiven'}</span>
+              {rankedApplications.length ? rankedApplications.map(({ application, rankLabel }) => {
+                const allowedStatuses = nextStatuses(application.status, 'landlord')
+                return (
+                  <div key={application.id} className="rounded-2xl border border-[#e8ebf3] p-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {rankLabel ? (
+                            <span className="rounded-full bg-[#111827] px-3 py-1 text-xs font-semibold text-white">{rankLabel}</span>
+                          ) : null}
+                          <div className="text-lg font-semibold text-[#111827]">{application.applicant.fullName}</div>
+                        </div>
+                        <div className="mt-1 text-sm text-[#6b7280]">{application.applicant.email} · {application.applicant.phone || 'Ingen telefon'}</div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#6b7280]">
+                          <span className="rounded-full bg-[#eef2ff] px-3 py-1 font-semibold text-[#243b8f]">{statusLabel(application.status)}</span>
+                          {application.policyResult ? (
+                            <span
+                              className={`rounded-full px-3 py-1 font-semibold ${
+                                application.policyResult === 'eligible'
+                                  ? 'bg-[#dcfce7] text-[#166534]'
+                                  : application.policyResult === 'likely_eligible'
+                                    ? 'bg-[#dbeafe] text-[#1d4ed8]'
+                                    : application.policyResult === 'missing_info'
+                                      ? 'bg-[#fef3c7] text-[#92400e]'
+                                      : 'bg-[#fee2e2] text-[#b91c1c]'
+                              }`}
+                            >
+                              Matchkoll:{' '}
+                              {application.policyResult === 'eligible'
+                                ? 'Uppfyller krav'
+                                : application.policyResult === 'likely_eligible'
+                                  ? 'Uppfyller troligen krav'
+                                  : application.policyResult === 'missing_info'
+                                    ? 'Uppgifter saknas'
+                                    : 'Uppfyller ej krav'}
+                            </span>
+                          ) : null}
+                          <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Köpoäng: {application.queuePointsSnapshot}</span>
+                          <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Dokument: {application.documents.length}</span>
+                          <span className="rounded-full bg-[#f7f8fc] px-3 py-1">Inkomst: {application.applicant.monthlyIncome ? `${application.applicant.monthlyIncome} kr/mån` : 'Ej angiven'}</span>
+                        </div>
+                        {application.coverLetter ? <p className="mt-4 text-sm leading-7 text-[#6b7280]">{application.coverLetter}</p> : null}
+                        {application.rejectionReason ? (
+                          <p className="mt-3 rounded-2xl bg-[#fef2f2] p-3 text-xs text-[#b91c1c]">Avslagsskäl: {application.rejectionReason}</p>
+                        ) : null}
                       </div>
-                      {application.coverLetter ? <p className="mt-4 text-sm leading-7 text-[#6b7280]">{application.coverLetter}</p> : null}
+
+                      <div className="flex min-w-[220px] flex-col gap-3">
+                        {allowedStatuses.length > 0 ? (
+                          <form action={updateApplicationStatusAction} className="flex flex-col gap-2">
+                            <input type="hidden" name="applicationId" value={application.id} />
+                            <Select name="status" defaultValue={allowedStatuses[0]}>
+                              {allowedStatuses.map((status) => (
+                                <option key={status} value={status}>{statusLabel(status)}</option>
+                              ))}
+                            </Select>
+                            <Select name="rejectionReason" defaultValue="">
+                              <option value="">Avslagsskäl (krävs vid avslag)…</option>
+                              {REJECTION_TEMPLATES.map((template) => (
+                                <option key={template.id} value={template.text}>{template.label}</option>
+                              ))}
+                            </Select>
+                            <Button type="submit" variant="secondary">Uppdatera status</Button>
+                          </form>
+                        ) : (
+                          <div className="rounded-2xl bg-[#f7f8fc] px-4 py-3 text-center text-xs font-semibold text-[#6b7280]">
+                            Slutstatus
+                          </div>
+                        )}
+
+                        <form action={requestApplicationInfoAction} className="flex flex-col gap-2">
+                          <input type="hidden" name="applicationId" value={application.id} />
+                          <Input name="message" placeholder="Begär komplettering…" className="h-10 rounded-2xl text-xs" />
+                          <Button type="submit" variant="ghost" className="h-9 border border-black/10 text-xs">
+                            Skicka begäran
+                          </Button>
+                        </form>
+
+                        <form action={startApplicationThreadAction} className="flex flex-col gap-2">
+                          <input type="hidden" name="applicationId" value={application.id} />
+                          <input type="hidden" name="subject" value="" />
+                          <Input name="body" placeholder="Starta meddelandetråd…" className="h-10 rounded-2xl text-xs" />
+                          <Button type="submit" variant="ghost" className="h-9 border border-black/10 text-xs">
+                            Skicka meddelande
+                          </Button>
+                        </form>
+
+                        {allowedStatuses.includes('offered') ? (
+                          <details className="rounded-2xl border border-[#bbf7d0] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#166534]">Skicka erbjudande</summary>
+                            <form action={sendOfferAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="applicationId" value={application.id} />
+                              <Input name="message" placeholder="Meddelande till sökanden" className="h-10 rounded-2xl text-xs" />
+                              <Input name="expiresAt" type="datetime-local" className="h-10 rounded-2xl text-xs" />
+                              <Button type="submit" variant="secondary" className="h-9 text-xs">Skicka erbjudande</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {normalizeStatus(application.status) === 'offered' && latestOfferByApplication.get(application.id)?.status === 'sent' ? (
+                          <details className="rounded-2xl border border-[#fecaca] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#b91c1c]">Dra tillbaka erbjudande</summary>
+                            <form action={withdrawOfferAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="offerId" value={latestOfferByApplication.get(application.id)!.id} />
+                              <Input name="reason" placeholder="Skäl (krävs)" required className="h-10 rounded-2xl text-xs" />
+                              <Button type="submit" variant="ghost" className="h-9 border border-[#fecaca] text-xs !text-[#b91c1c]">Dra tillbaka</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {normalizeStatus(application.status) === 'offer_accepted' && !contractByApplication.has(application.id) ? (
+                          <details className="rounded-2xl border border-[#c7d2fe] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#3730a3]">Skapa kontrakt</summary>
+                            <form action={createContractDraftAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="applicationId" value={application.id} />
+                              <Select name="templateId" className="h-10 text-xs">
+                                {(templates ?? []).map((template) => (
+                                  <option key={template.id} value={template.id}>{template.name} (v{template.version})</option>
+                                ))}
+                              </Select>
+                              <Button type="submit" variant="secondary" className="h-9 text-xs">Skapa kontraktsutkast</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {contractByApplication.has(application.id) ? (
+                          <div className="rounded-2xl border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs">
+                            {(() => {
+                              const contract = contractByApplication.get(application.id)!
+                              const mySignerPending = contract.contract_signers?.some(
+                                (signer) => signer.status === 'pending' && signer.signer_role === 'landlord',
+                              )
+                              return (
+                                <div className="space-y-2">
+                                  <div className="font-semibold text-[#3730a3]">
+                                    Kontrakt: {contract.status === 'internal_review' ? 'Intern granskning' : contract.status === 'sent_for_signing' ? 'Väntar på signaturer' : contract.status === 'signed' ? 'Signerat' : contract.status}
+                                    {contract.provider === 'mock' ? ' · testsignering' : ''}
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {(contract.contract_signers ?? []).map((signer) => (
+                                      <li key={signer.id}>
+                                        {signer.full_name} ({signer.signer_role}) — {signer.status === 'signed' ? '✓ signerad' : 'väntar'}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {contract.status === 'internal_review' ? (
+                                    esignResolution.kind === 'provider' ? (
+                                      <form action={sendContractForSigningAction}>
+                                        <input type="hidden" name="contractId" value={contract.id} />
+                                        <Button type="submit" variant="secondary" className="h-9 text-xs">
+                                          Skicka för signering{esignResolution.provider.isMock ? ' (test)' : ''}
+                                        </Button>
+                                      </form>
+                                    ) : (
+                                      <p className="font-semibold text-[#92400e]">
+                                        E-signering är inte konfigurerad i den här miljön.
+                                      </p>
+                                    )
+                                  ) : null}
+                                  {contract.status === 'sent_for_signing' && contract.provider === 'mock' && mySignerPending ? (
+                                    <form action={mockSignContractAction}>
+                                      <input type="hidden" name="contractId" value={contract.id} />
+                                      <Button type="submit" variant="secondary" className="h-9 text-xs">Signera som hyresvärd (test)</Button>
+                                    </form>
+                                  ) : null}
+                                </div>
+                              )
+                            })()}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                    <form action={updateApplicationStatusAction} className="flex min-w-[180px] flex-col gap-3">
-                      <input type="hidden" name="applicationId" value={application.id} />
-                      <Select name="status" defaultValue={application.status}>
-                        {applicationStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                      </Select>
-                      <Button type="submit" variant="secondary">Uppdatera</Button>
-                    </form>
                   </div>
-                </div>
-              )) : <p className="text-sm text-[#6b7280]">Inga ansökningar för detta objekt ännu.</p>}
+                )
+              }) : <p className="text-sm text-[#6b7280]">Inga ansökningar för detta objekt ännu.</p>}
             </div>
+
+            {rankedApplications.filter(({ application }) => nextStatuses(application.status, 'landlord').includes('rejected')).length > 1 ? (
+              <details className="mt-6 rounded-2xl border border-[#fecaca] bg-[#fff7f7] p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-[#b91c1c]">Massavslag (välj flera)</summary>
+                <form action={bulkRejectApplicationsAction} className="mt-4 space-y-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {rankedApplications
+                      .filter(({ application }) => nextStatuses(application.status, 'landlord').includes('rejected'))
+                      .map(({ application }) => (
+                        <label key={application.id} className="flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm">
+                          <input type="checkbox" name="applicationIds" value={application.id} />
+                          {application.applicant.fullName} ({statusLabel(application.status)})
+                        </label>
+                      ))}
+                  </div>
+                  <Select name="rejectionReason" defaultValue={REJECTION_TEMPLATES[4].text}>
+                    {REJECTION_TEMPLATES.map((template) => (
+                      <option key={template.id} value={template.text}>{template.label}</option>
+                    ))}
+                  </Select>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-[#b91c1c]">
+                    <input type="checkbox" name="confirmBulk" required />
+                    Jag bekräftar att valda ansökningar ska avslås. Sökande notifieras.
+                  </label>
+                  <Button type="submit" variant="ghost" className="border border-[#fecaca] !text-[#b91c1c]">
+                    Avslå valda
+                  </Button>
+                </form>
+              </details>
+            ) : null}
           </Card>
 
           <Card className="p-6">

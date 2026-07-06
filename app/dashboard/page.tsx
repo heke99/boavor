@@ -3,23 +3,25 @@ import { AlertCircle, ArrowRight, Building2, FileText, Inbox, UserCheck } from '
 import { Card } from '@/components/ui/Card'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { Button } from '@/components/ui/Button'
-import { getDashboardProfile } from '@/lib/data/profile'
+import { CampaignBanner } from '@/components/marketing/CampaignBanner'
+import { getReadinessForCurrentUser } from '@/lib/data/readiness'
 import { getOwnerDashboardData, getUserApplications } from '@/lib/data/rental-applications'
-import { calculateProfileScore } from '@/lib/dashboard/profile-score'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [{ isSignedIn, profile }, userApplications] = await Promise.all([
-    getDashboardProfile(),
+  const [readinessSummary, userApplications] = await Promise.all([
+    getReadinessForCurrentUser(),
     getUserApplications().catch(() => []),
   ])
+
+  const profile = readinessSummary?.profile ?? null
+  const isSignedIn = Boolean(profile)
+  const readiness = readinessSummary?.readiness ?? null
 
   const ownerData = isSignedIn && profile
     ? await getOwnerDashboardData().catch(() => ({ listings: [], incomingApplications: [], incomingInquiries: [], profile }))
     : { listings: [], incomingApplications: [], incomingInquiries: [], profile }
-
-  const profileScore = profile ? calculateProfileScore(profile) : null
   const isCompany = profile?.accountType === 'company' || ['company_admin', 'broker', 'landlord'].includes(profile?.role ?? '')
   const activeApplications = userApplications.filter((item) => ['submitted', 'reviewing', 'shortlisted', 'offered'].includes(item.status)).length
   const publishedListings = ownerData.listings.filter((item) => item.status === 'published').length
@@ -31,14 +33,20 @@ export default async function DashboardPage() {
       title={isCompany ? 'Företagsöversikt' : 'Min översikt'}
       description="Här får du en rollstyrd överblick över ansökningar, profil, dokument, objekt och inkommande leads."
     >
+      <CampaignBanner placement="dashboard" />
+
       <div className="grid gap-5 md:grid-cols-4">
         <Card className="p-6">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold text-[#6b7280]">Profilstyrka</div>
+            <div className="text-sm font-semibold text-[#6b7280]">Ansökningsredo</div>
             <UserCheck size={18} className="text-[#5b3df5]" />
           </div>
-          <div className="mt-2 text-3xl font-semibold text-[#111827]">{profileScore?.score ?? 0}%</div>
-          <p className="mt-3 text-sm leading-6 text-[#6b7280]">Komplettera profil, inkomst och dokument för starkare ansökningar.</p>
+          <div className="mt-2 text-3xl font-semibold text-[#111827]">{readiness?.score ?? 0}%</div>
+          <p className="mt-3 text-sm leading-6 text-[#6b7280]">
+            {readiness?.canApply
+              ? 'Din profil är redo för ansökningar.'
+              : 'Åtgärda blockerande punkter för att kunna ansöka.'}
+          </p>
         </Card>
         <Card className="p-6">
           <div className="flex items-center justify-between gap-3">
@@ -66,18 +74,23 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {profileScore && profileScore.missing.length > 0 ? (
+      {readiness && (readiness.blocking.length > 0 || readiness.missing.length > 0) ? (
         <Card className="border border-[#fde68a] bg-[#fffbeb] p-6">
           <div className="flex items-start gap-3">
             <AlertCircle size={20} className="mt-1 text-[#b45309]" />
-            <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Förbättra din profil</h2>
-              <p className="mt-2 text-sm leading-6 text-[#6b7280]">
-                Saknas just nu: {profileScore.missing.slice(0, 5).join(', ')}{profileScore.missing.length > 5 ? ' med mera' : ''}.
-              </p>
-              <div className="mt-4">
-                <Button href="/dashboard/profile">Komplettera profil</Button>
-              </div>
+            <div className="w-full">
+              <h2 className="text-lg font-semibold text-[#111827]">
+                {readiness.blocking.length > 0 ? 'Innan du kan ansöka' : 'Förbättra din profil'}
+              </h2>
+              <ul className="mt-3 space-y-2">
+                {[...readiness.blocking, ...readiness.missing].slice(0, 6).map((item) => (
+                  <li key={item.key}>
+                    <Link href={item.href} className="text-sm font-semibold text-[#92400e] underline underline-offset-4 hover:text-[#78350f]">
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </Card>

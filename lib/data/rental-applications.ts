@@ -27,6 +27,7 @@ import type {
 import { calculateApplicationScore } from '@/lib/dashboard/profile-score'
 import { getDashboardProfile } from '@/lib/data/profile'
 import { getListingBySlug } from '@/lib/data/listings'
+import { parseStorageUri } from '@/lib/storage'
 
 type RentalApplicationRow = {
   id: string
@@ -36,6 +37,8 @@ type RentalApplicationRow = {
   cover_letter: string | null
   queue_points_snapshot: number
   queue_joined_at_snapshot: string | null
+  random_rank?: number | null
+  rejection_reason?: string | null
   listing_slug: string
   listing_title: string
   listing_city: string
@@ -58,10 +61,15 @@ type ApplicationCoApplicantRow = {
 }
 
 type ApplicationDocumentRow = {
+  id: string
   application_id: string
   file_name: string
   file_url: string
   document_type: string
+}
+
+function getApplicationDocumentUrl(document: ApplicationDocumentRow) {
+  return parseStorageUri(document.file_url) ? `/dashboard/applications/documents/${document.id}/view` : document.file_url
 }
 
 type ListingRow = {
@@ -177,7 +185,25 @@ export async function getUserApplications() {
     applicantsCountMap.set(row.listing_id, (applicantsCountMap.get(row.listing_id) ?? 0) + 1)
   }
 
+  // Status timeline for the applicant's own applications.
+  const applicationIds = ((applications ?? []) as RentalApplicationRow[]).map((row) => row.id)
+  const { data: historyRows } = applicationIds.length
+    ? await supabase
+        .from('rental_application_status_history')
+        .select('application_id, from_status, to_status, note, created_at')
+        .in('application_id', applicationIds)
+        .order('created_at', { ascending: true })
+    : { data: [] }
+
+  const historyMap = new Map<string, Array<{ fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }>>()
+  for (const row of historyRows ?? []) {
+    const current = historyMap.get(row.application_id) ?? []
+    current.push({ fromStatus: row.from_status, toStatus: row.to_status, note: row.note, createdAt: row.created_at })
+    historyMap.set(row.application_id, current)
+  }
+
   return ((applications ?? []) as RentalApplicationRow[]).map((row) => ({
+    history: historyMap.get(row.id) ?? [],
     id: row.id,
     listingId: row.listing_id,
     status: row.status,
@@ -463,6 +489,15 @@ type ManagedListingEditRow = ManagedListingDetailRow & {
   units_count: number | string | null
   created_by: string | null
   company_id: string | null
+  is_student_housing?: boolean | null
+  is_senior_housing?: boolean | null
+  is_short_term?: boolean | null
+  has_accessibility?: boolean | null
+  application_deadline?: string | null
+  viewing_info?: string | null
+  policy_summary?: string | null
+  hide_exact_address?: boolean | null
+  show_applicant_count?: boolean | null
 }
 
 type ListingInternalNoteRow = {
@@ -527,6 +562,8 @@ function mapApplicationRows(
       coverLetter: row.cover_letter,
       queuePointsSnapshot: row.queue_points_snapshot,
       queueJoinedAtSnapshot: row.queue_joined_at_snapshot,
+      randomRank: row.random_rank ?? null,
+      rejectionReason: row.rejection_reason ?? null,
       listing: {
         slug: row.listing_slug,
         title: row.listing_title,
@@ -569,9 +606,9 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
 
   const { data: listing, error } = await supabase
     .from('listings')
-    .select('id, slug, title, description, street, area_name, available_from, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .select('id, slug, title, description, street, area_name, available_from, city, listing_type, listing_segment, property_type, commercial_type, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id, selection_method, application_deadline')
     .eq('id', listingId)
-    .maybeSingle<ManagedListingDetailRow & { created_by: string | null; company_id: string | null }>()
+    .maybeSingle<ManagedListingDetailRow & { created_by: string | null; company_id: string | null; selection_method?: string | null; application_deadline?: string | null }>()
 
   if (error) {
     console.error('Failed to fetch managed listing detail', error)
@@ -591,7 +628,7 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
       .order('position', { ascending: true }),
     supabase
       .from('rental_applications')
-      .select('id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size')
+      .select('id, listing_id, status, created_at, cover_letter, queue_points_snapshot, queue_joined_at_snapshot, listing_slug, listing_title, listing_city, listing_type, listing_price, listing_image_url, applicant_full_name, applicant_email, applicant_phone, applicant_monthly_income, applicant_household_size, random_rank, rejection_reason')
       .eq('listing_id', listingId)
       .order('created_at', { ascending: false }),
     supabase
@@ -614,18 +651,26 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
   ])
 
   const applicationIds = ((applicationRows ?? []) as RentalApplicationRow[]).map((item) => item.id)
-  const [{ data: coApplicants }, { data: documents }] = applicationIds.length
+  const [{ data: coApplicants }, { data: documents }, { data: policyResults }] = applicationIds.length
     ? await Promise.all([
         supabase.from('rental_application_co_applicants').select('application_id, full_name, email, phone, relationship').in('application_id', applicationIds),
         supabase.from('rental_application_documents').select('application_id, file_name, file_url, document_type').in('application_id', applicationIds),
+        supabase.from('application_policy_results').select('application_id, result').in('application_id', applicationIds),
       ])
-    : [{ data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }]
+
+  const policyResultMap = new Map<string, string>(
+    ((policyResults ?? []) as Array<{ application_id: string; result: string }>).map((row) => [row.application_id, row.result]),
+  )
 
   const applications = mapApplicationRows(
     (applicationRows ?? []) as RentalApplicationRow[],
     (coApplicants ?? []) as ApplicationCoApplicantRow[],
     (documents ?? []) as ApplicationDocumentRow[],
-  )
+  ).map((application) => ({
+    ...application,
+    policyResult: (policyResultMap.get(application.id) as RentalApplicationItem['policyResult']) ?? null,
+  }))
 
   const inquiries: ListingInquiryItem[] = ((inquiryRows ?? []) as InquiryRow[]).map((row) => ({
     id: row.id,
@@ -673,6 +718,8 @@ export async function getManagedListingDetail(listingId: string): Promise<Manage
     street: listing.street,
     areaName: listing.area_name,
     availableFrom: listing.available_from,
+    selectionMethod: (listing.selection_method ?? 'manual_with_policy') as NonNullable<ManagedListingDetailItem['selectionMethod']>,
+    applicationDeadlineAt: listing.application_deadline ?? null,
     images: ((images ?? []) as ListingImageRow[]).map((image) => ({
       id: image.id,
       imageUrl: image.image_url,
@@ -707,7 +754,7 @@ export async function getManagedListingEditData(listingId: string): Promise<List
 
   const { data: listing, error } = await supabase
     .from('listings')
-    .select('id, slug, title, description, street, area_name, zip_code, available_from, city, listing_type, listing_segment, property_type, commercial_type, parking_type, storage_type, land_type, investment_type, business_purpose, is_vat_applicable, monthly_service_fee, price_per_sqm, min_lease_months, annual_income, operating_cost, cap_rate, units_count, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id')
+    .select('id, slug, title, description, street, area_name, zip_code, available_from, city, listing_type, listing_segment, property_type, commercial_type, parking_type, storage_type, land_type, investment_type, business_purpose, is_vat_applicable, monthly_service_fee, price_per_sqm, min_lease_months, annual_income, operating_cost, cap_rate, units_count, status, price, rooms, area_sqm, created_at, updated_at, created_by, company_id, is_student_housing, is_senior_housing, is_short_term, has_accessibility, application_deadline, viewing_info, policy_summary, hide_exact_address, show_applicant_count')
     .eq('id', listingId)
     .maybeSingle<ManagedListingEditRow>()
 
@@ -788,6 +835,15 @@ export async function getManagedListingEditData(listingId: string): Promise<List
     areaName: listing.area_name,
     zipCode: listing.zip_code,
     availableFrom: listing.available_from,
+    isStudentHousing: Boolean(listing.is_student_housing),
+    isSeniorHousing: Boolean(listing.is_senior_housing),
+    isShortTerm: Boolean(listing.is_short_term),
+    hasAccessibility: Boolean(listing.has_accessibility),
+    applicationDeadline: listing.application_deadline ?? null,
+    viewingInfo: listing.viewing_info ?? null,
+    policySummary: listing.policy_summary ?? null,
+    hideExactAddress: Boolean(listing.hide_exact_address),
+    showApplicantCount: Boolean(listing.show_applicant_count),
     images: ((images ?? []) as ListingImageRow[]).map((image) => ({
       id: image.id,
       imageUrl: image.image_url,

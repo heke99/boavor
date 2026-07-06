@@ -30,7 +30,8 @@ type FavoriteListingRow = {
 type FavoriteRow = {
   id: string
   created_at: string
-  listings: FavoriteListingRow[] | null
+  // favorites -> listings is many-to-one, so PostgREST embeds a single object.
+  listings: FavoriteListingRow | null
 }
 
 type SavedSearchRow = {
@@ -131,9 +132,9 @@ export async function getDashboardFavorites() {
   }
 
   const favorites = (data ?? [])
-    .map((row) => row as FavoriteRow)
+    .map((row) => row as unknown as FavoriteRow)
     .map((row) => {
-      const listing = row.listings?.[0] ?? null
+      const listing = row.listings
       if (!listing) return null
 
       return {

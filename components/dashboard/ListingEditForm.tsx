@@ -20,6 +20,8 @@ import { listingActionLabels, listingSegmentLabels } from '@/lib/listing-options
 type Props = {
   listing: ListingEditItem
   action: (formData: FormData) => void | Promise<void>
+  policies?: Array<{ id: string; name: string }>
+  assignedPolicyId?: string | null
 }
 
 const segmentOptions: Array<{ value: ListingSegment; label: string; help: string }> = [
@@ -39,7 +41,7 @@ function valueOrEmpty(value: string | number | null | undefined) {
   return value === null || value === undefined ? '' : String(value)
 }
 
-export function ListingEditForm({ listing, action }: Props) {
+export function ListingEditForm({ listing, action, policies = [], assignedPolicyId = null }: Props) {
   const [segment, setSegment] = useState<ListingSegment>(listing.listingSegment)
   const [listingType, setListingType] = useState<ListingType>(listing.listingType)
   const [commercialType, setCommercialType] = useState<CommercialType>(listing.commercialType ?? 'retail')
@@ -54,7 +56,7 @@ export function ListingEditForm({ listing, action }: Props) {
   }, [commercialType, segment])
 
   return (
-    <form action={action} className="space-y-7">
+    <form action={action} encType="multipart/form-data" className="space-y-7">
       <input type="hidden" name="listingId" value={listing.id} />
       <input type="hidden" name="listingSegment" value={segment} />
 
@@ -210,7 +212,8 @@ export function ListingEditForm({ listing, action }: Props) {
         ) : null}
 
         <Input name="availableFrom" defaultValue={listing.availableFrom ?? ''} placeholder="Tillgänglig från (YYYY-MM-DD)" />
-        <Input name="imageUrl" defaultValue={listing.coverImageUrl ?? ''} placeholder="Ny/uppdaterad omslagsbild-URL" />
+        <Input name="imageFiles" type="file" accept="image/*" multiple />
+        <Input name="imageUrl" defaultValue={listing.coverImageUrl ?? ''} placeholder="Alternativ omslagsbild-URL" />
         <Input name="features" defaultValue={listing.features.join(', ')} placeholder="Egenskaper, separera med kommatecken" className="md:col-span-2 xl:col-span-3" />
 
         <textarea
@@ -245,6 +248,78 @@ export function ListingEditForm({ listing, action }: Props) {
               <option value="false">Referenser ej krav</option>
               <option value="true">Referenser krävs</option>
             </Select>
+
+            <div className="md:col-span-2 xl:col-span-3 grid gap-3 rounded-3xl border border-black/8 bg-[#fbfbfe] p-5">
+              <div className="text-sm font-semibold text-[#111827]">Uthyrningsprocess</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Sista ansökningsdag (valfritt)</label>
+                  <Input
+                    name="applicationDeadline"
+                    type="date"
+                    defaultValue={listing.applicationDeadline ? listing.applicationDeadline.slice(0, 10) : ''}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Visningsinformation</label>
+                  <Input name="viewingInfo" defaultValue={listing.viewingInfo ?? ''} placeholder="T.ex. Visning bokas efter urval" />
+                </div>
+              </div>
+              <textarea
+                name="policySummary"
+                rows={3}
+                defaultValue={listing.policySummary ?? ''}
+                placeholder="Kort sammanfattning av era uthyrningskrav och hur urvalet går till (visas publikt)"
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+              />
+              {policies.length > 0 ? (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Uthyrningspolicy (Matchkoll)</label>
+                  <Select name="policyId" defaultValue={assignedPolicyId ?? ''}>
+                    <option value="">Använd annonsens hyreskrav</option>
+                    {policies.map((policy) => (
+                      <option key={policy.id} value={policy.id}>{policy.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[#6b7280]">Urvalsmetod</label>
+                <Select name="selectionMethod" defaultValue={listing.selectionMethod ?? 'manual_with_policy'}>
+                  <option value="manual_with_policy">Manuellt urval med krav</option>
+                  <option value="strict_queue">Strikt kötid</option>
+                  <option value="guided_queue">Vägledd kötid (rekommendation)</option>
+                  <option value="first_come">Först till kvarn</option>
+                  <option value="random">Slumpad ordning efter deadline</option>
+                </Select>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isStudentHousing" defaultChecked={listing.isStudentHousing ?? false} />
+                  Studentbostad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isSeniorHousing" defaultChecked={listing.isSeniorHousing ?? false} />
+                  Seniorbostad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="isShortTerm" defaultChecked={listing.isShortTerm ?? false} />
+                  Korttidskontrakt
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="hasAccessibility" defaultChecked={listing.hasAccessibility ?? false} />
+                  Tillgänglighetsanpassad
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="hideExactAddress" defaultChecked={listing.hideExactAddress ?? false} />
+                  Dölj exakt adress publikt
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm">
+                  <input type="checkbox" name="showApplicantCount" defaultChecked={listing.showApplicantCount ?? false} />
+                  Visa antal sökande publikt
+                </label>
+              </div>
+            </div>
           </>
         ) : null}
       </div>

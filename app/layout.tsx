@@ -1,14 +1,62 @@
 import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { siteConfig } from '@/lib/site'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
+import { PwaRegister } from '@/components/pwa/PwaRegister'
+import { MaintenanceBanner } from '@/components/platform/MaintenanceBanner'
+import { getSiteUrl } from '@/lib/url'
 
-export const dynamic = 'force-dynamic'
+const siteUrl = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: siteConfig.name,
+  metadataBase: new URL(siteUrl),
+  applicationName: siteConfig.name,
+  title: {
+    default: `${siteConfig.name} | Hyra, köpa och publicera bostäder`,
+    template: `%s | ${siteConfig.name}`,
+  },
   description: siteConfig.description,
+  keywords: siteConfig.keywords,
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'sv_SE',
+    url: '/',
+    siteName: siteConfig.name,
+    title: `${siteConfig.name} | Hyra, köpa och publicera bostäder`,
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${siteConfig.name} | Hyra, köpa och publicera bostäder`,
+    description: siteConfig.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  appleWebApp: {
+    capable: true,
+    title: siteConfig.name,
+    statusBarStyle: 'default',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#111827',
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
@@ -18,10 +66,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv" data-scroll-behavior="smooth">
-      <body>
+      <body className="pb-16 md:pb-0">
+        <a
+          href="#huvudinnehall"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-2xl focus:bg-[#111827] focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Hoppa till innehållet
+        </a>
+        <MaintenanceBanner />
         <Header />
-        <main>{children}</main>
+        <main id="huvudinnehall">{children}</main>
         <Footer />
+        <MobileBottomNav />
+        <PwaRegister />
       </body>
     </html>
   )

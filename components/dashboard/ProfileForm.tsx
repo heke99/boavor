@@ -5,14 +5,44 @@ import { Button } from '@/components/ui/Button'
 import type { DashboardProfileItem } from '@/lib/types'
 import {
   addCoApplicantAction,
+  addGuarantorAction,
   addProfileDocumentAction,
+  inviteCoApplicantAction,
   pauseQueueMembershipAction,
   removeCoApplicantAction,
+  removeGuarantorAction,
   removeProfileDocumentAction,
   resumeQueueMembershipAction,
   saveProfileAction,
   startQueueMembershipAction,
 } from '@/app/dashboard/profile/actions'
+
+const INVITE_STATUS_LABELS: Record<string, string> = {
+  none: 'Ej inbjuden',
+  invited: 'Inbjuden – väntar på svar',
+  accepted: 'Har accepterat och samtyckt',
+  declined: 'Tackade nej',
+}
+
+export type QueueLedgerEntryView = {
+  id: string
+  eventType: string
+  pointsDelta: number
+  balanceAfter: number
+  note: string | null
+  createdAt: string
+}
+
+const LEDGER_EVENT_LABELS: Record<string, string> = {
+  enrolled: 'Gick med i kön',
+  daily_accrual: 'Daglig poäng',
+  monthly_accrual: 'Poänguppdatering',
+  manual_adjustment: 'Manuell justering',
+  paused: 'Pausad',
+  resumed: 'Återupptagen',
+  cancelled: 'Avslutad',
+  reset: 'Nollställd',
+}
 
 function formatDate(value: string | null) {
   if (!value) return '—'
@@ -23,7 +53,13 @@ function formatDate(value: string | null) {
   }
 }
 
-export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
+export function ProfileForm({
+  profile,
+  queueLedger = [],
+}: {
+  profile: DashboardProfileItem
+  queueLedger?: QueueLedgerEntryView[]
+}) {
   const queue = profile.queueMembership
   const queueActive = queue?.status === 'active'
   const company = profile.companies[0] ?? null
@@ -50,7 +86,6 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
                 <option value="private">Privatperson</option>
                 <option value="company">Företag</option>
               </Select>
-              <Input name="personalIdentityNumber" placeholder="Personnummer" defaultValue={profile.personalIdentityNumber ?? ''} />
               <Select name="preferredListingIntent" defaultValue={profile.preferredListingIntent ?? 'both'}>
                 <option value="rent">Främst hyra</option>
                 <option value="buy">Främst köpa</option>
@@ -74,6 +109,31 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               </Select>
               <Input name="employerName" placeholder="Arbetsgivare" defaultValue={profile.employerName} />
               <Input name="monthlyIncome" type="number" min={0} placeholder="Månadsinkomst" defaultValue={profile.monthlyIncome ?? undefined} />
+              <Select name="incomeType" defaultValue={profile.incomeType ?? ''}>
+                <option value="">Typ av inkomst…</option>
+                <option value="salary">Lön</option>
+                <option value="pension">Pension</option>
+                <option value="student_aid">Studiemedel</option>
+                <option value="benefits">Ersättning/bidrag</option>
+                <option value="business_income">Näringsinkomst</option>
+                <option value="other">Annan</option>
+              </Select>
+              <Select name="studyStatus" defaultValue={profile.studyStatus ?? ''}>
+                <option value="">Studerar du?…</option>
+                <option value="not_studying">Studerar inte</option>
+                <option value="full_time">Heltidsstudier</option>
+                <option value="part_time">Deltidsstudier</option>
+              </Select>
+              <Select name="currentHousingSituation" defaultValue={profile.currentHousingSituation ?? ''}>
+                <option value="">Nuvarande boende…</option>
+                <option value="first_hand">Förstahandskontrakt</option>
+                <option value="second_hand">Andrahandskontrakt</option>
+                <option value="owned">Äger bostad</option>
+                <option value="parents">Bor hos föräldrar</option>
+                <option value="lodger">Inneboende</option>
+                <option value="student_housing">Studentbostad</option>
+                <option value="other">Annat</option>
+              </Select>
               <Input name="desiredMoveIn" type="date" placeholder="Önskat inflyttningsdatum" defaultValue={profile.desiredMoveIn ?? undefined} />
               <label className="flex items-center gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm text-[var(--foreground)]">
                 <input type="checkbox" name="marketingConsent" defaultChecked={profile.marketingConsent ?? false} />
@@ -81,7 +141,7 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
               <Input
                 name="desiredLocations"
                 placeholder="Önskade områden, separera med kommatecken"
@@ -91,6 +151,25 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
                 <input type="checkbox" name="hasPets" defaultChecked={profile.hasPets} />
                 Har husdjur
               </label>
+              <label className="flex items-center gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm text-[var(--foreground)]">
+                <input type="checkbox" name="smoking" defaultChecked={profile.smoking ?? false} />
+                Rökning i hushållet
+              </label>
+              <label className="flex items-center gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm text-[var(--foreground)]">
+                <input type="checkbox" name="guarantorAvailable" defaultChecked={profile.guarantorAvailable ?? false} />
+                Borgensman finns
+              </label>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Personligt brev</label>
+              <textarea
+                name="personalLetter"
+                rows={5}
+                defaultValue={profile.personalLetter ?? ''}
+                placeholder="Berätta kort om dig själv, ditt hushåll och varför du är en trygg hyresgäst. Brevet återanvänds i dina ansökningar."
+                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+              />
             </div>
 
             <div className="rounded-[24px] border border-black/8 bg-[var(--surface)] p-5">
@@ -164,12 +243,78 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <div className="rounded-2xl border border-dashed border-black/10 px-4 py-5 text-sm text-[var(--muted)]">Inga medsökande sparade ännu.</div>
             ) : (
               profile.coApplicants.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-black/8 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="font-semibold">{item.fullName}</div>
+                      <div className="mt-1 text-sm text-[var(--muted)]">{item.relationship || 'Ingen relation angiven'} • {item.email || 'Ingen e-post'} • {item.phone || 'Ingen telefon'}</div>
+                      <div className="mt-2 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+                        {INVITE_STATUS_LABELS[item.inviteStatus ?? 'none']}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {item.inviteStatus !== 'accepted' ? (
+                        <form action={inviteCoApplicantAction}>
+                          <input type="hidden" name="id" value={item.id} />
+                          <Button variant="secondary" className="text-sm">
+                            {item.inviteStatus === 'invited' ? 'Skapa ny inbjudningslänk' : 'Bjud in för samtycke'}
+                          </Button>
+                        </form>
+                      ) : null}
+                      <form action={removeCoApplicantAction}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <Button variant="ghost" className="border border-black/8">Ta bort</Button>
+                      </form>
+                    </div>
+                  </div>
+                  {item.inviteStatus === 'invited' && item.inviteToken ? (
+                    <div className="mt-3 rounded-2xl bg-[#f7f8fc] p-3 text-xs text-[var(--muted)]">
+                      Dela denna länk med din medsökande så att hen kan acceptera och samtycka:
+                      <div className="mt-1 select-all break-all font-mono text-[11px] text-[var(--foreground)]">
+                        {`/co-applicant/invite/${item.inviteToken}`}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Borgensman</h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">Om du har en borgensman kan det stärka dina ansökningar hos vissa hyresvärdar.</p>
+            </div>
+            <div className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-[var(--muted)]">{profile.guarantors?.length ?? 0} st</div>
+          </div>
+
+          <form action={addGuarantorAction} className="grid gap-4 md:grid-cols-2">
+            <Input name="fullName" placeholder="Fullständigt namn" />
+            <Input name="relationship" placeholder="Relation, t.ex. förälder" />
+            <Input name="email" type="email" placeholder="E-post" />
+            <Input name="phone" placeholder="Telefon" />
+            <Input name="monthlyIncome" type="number" min={0} placeholder="Månadsinkomst (valfritt)" />
+            <div className="flex justify-end md:col-span-1">
+              <Button variant="secondary">Lägg till borgensman</Button>
+            </div>
+          </form>
+
+          <div className="mt-6 space-y-3">
+            {(profile.guarantors ?? []).length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-black/10 px-4 py-5 text-sm text-[var(--muted)]">Ingen borgensman tillagd.</div>
+            ) : (
+              (profile.guarantors ?? []).map((item) => (
                 <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-black/8 p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <div className="font-semibold">{item.fullName}</div>
-                    <div className="mt-1 text-sm text-[var(--muted)]">{item.relationship || 'Ingen relation angiven'} • {item.email || 'Ingen e-post'} • {item.phone || 'Ingen telefon'}</div>
+                    <div className="mt-1 text-sm text-[var(--muted)]">
+                      {item.relationship || 'Ingen relation angiven'} • {item.email || 'Ingen e-post'} • {item.phone || 'Ingen telefon'}
+                      {item.monthlyIncome ? ` • ${item.monthlyIncome} kr/mån` : ''}
+                    </div>
                   </div>
-                  <form action={removeCoApplicantAction}>
+                  <form action={removeGuarantorAction}>
                     <input type="hidden" name="id" value={item.id} />
                     <Button variant="ghost" className="border border-black/8">Ta bort</Button>
                   </form>
@@ -188,9 +333,10 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
             <div className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-[var(--muted)]">{profile.documents.length} st</div>
           </div>
 
-          <form action={addProfileDocumentAction} className="grid gap-4 md:grid-cols-3">
+          <form action={addProfileDocumentAction} encType="multipart/form-data" className="grid gap-4 md:grid-cols-3">
             <Input name="fileName" placeholder="Filnamn" />
-            <Input name="fileUrl" placeholder="Fil-URL" />
+            <Input name="file" type="file" accept=".pdf,image/*,.doc,.docx" />
+            <Input name="fileUrl" placeholder="Alternativ fil-URL" />
             <Input name="documentType" placeholder="Dokumenttyp, t.ex. income-proof" />
             <div className="md:col-span-3 flex justify-end">
               <Button variant="secondary">Lägg till dokument</Button>
@@ -223,9 +369,11 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
 
       <div className="space-y-6">
         <Card className="p-6">
-          <div className="inline-flex rounded-full bg-[var(--secondary-soft)] px-3 py-1 text-xs font-semibold text-[var(--secondary)]">Köpoäng</div>
-          <h2 className="mt-4 text-2xl font-semibold">Bovaro Kö+</h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--muted)]">Köpoäng fungerar som ett extra incitament. Hyresvärdar kan se köpoäng och kötid, men de måste inte välja efter poäng.</p>
+          <div className="inline-flex rounded-full bg-[var(--secondary-soft)] px-3 py-1 text-xs font-semibold text-[var(--secondary)]">Bostadskö</div>
+          <h2 className="mt-4 text-2xl font-semibold">Bovaro bostadskö</h2>
+          <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+            Kön är kostnadsfri. Du samlar 1 köpoäng per dag i kön, och poängen följer med i dina ansökningar.
+          </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-black/8 p-4">
@@ -233,39 +381,52 @@ export function ProfileForm({ profile }: { profile: DashboardProfileItem }) {
               <div className="mt-2 text-3xl font-semibold">{queue?.currentPoints ?? 0}</div>
             </div>
             <div className="rounded-2xl border border-black/8 p-4">
-              <div className="text-sm text-[var(--muted)]">Månader i kö</div>
-              <div className="mt-2 text-3xl font-semibold">{queue?.monthsInQueue ?? 0}</div>
-            </div>
-            <div className="rounded-2xl border border-black/8 p-4">
               <div className="text-sm text-[var(--muted)]">Köstart</div>
               <div className="mt-2 text-lg font-semibold">{formatDate(queue?.joinedQueueAt ?? null)}</div>
             </div>
-            <div className="rounded-2xl border border-black/8 p-4">
+            <div className="rounded-2xl border border-black/8 p-4 sm:col-span-2">
               <div className="text-sm text-[var(--muted)]">Status</div>
               <div className="mt-2 text-lg font-semibold capitalize">{queue?.status ?? 'Inte aktiv'}</div>
-              <div className="mt-1 text-xs text-[var(--muted)]">Subscription: {queue?.subscriptionStatus ?? 'inte startad'}</div>
             </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl bg-black/5 p-4 text-sm text-[var(--muted)]">
-            Nästa betalperiod: <span className="font-semibold text-[var(--foreground)]">{formatDate(queue?.nextBillingAt ?? null)}</span>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
             {!queue ? (
               <form action={startQueueMembershipAction}>
-                <Button>Starta Kö+</Button>
+                <Button>Gå med i kön</Button>
               </form>
             ) : queueActive ? (
               <form action={pauseQueueMembershipAction}>
-                <Button variant="ghost" className="border border-black/8">Pausa Kö+</Button>
+                <Button variant="ghost" className="border border-black/8">Pausa köplats</Button>
               </form>
             ) : (
               <form action={resumeQueueMembershipAction}>
-                <Button>Återaktivera Kö+</Button>
+                <Button>Återaktivera köplats</Button>
               </form>
             )}
           </div>
+
+          {queueLedger.length > 0 ? (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">Köhistorik</h3>
+              <ul className="mt-3 space-y-2">
+                {queueLedger.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl bg-black/[0.03] px-4 py-2.5 text-sm">
+                    <div>
+                      <span className="font-semibold">{LEDGER_EVENT_LABELS[entry.eventType] ?? entry.eventType}</span>
+                      <span className="ml-2 text-xs text-[var(--muted)]">{formatDate(entry.createdAt)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={entry.pointsDelta >= 0 ? 'font-semibold text-[#15803d]' : 'font-semibold text-[#b91c1c]'}>
+                        {entry.pointsDelta >= 0 ? '+' : ''}{entry.pointsDelta}
+                      </span>
+                      <span className="ml-2 text-xs text-[var(--muted)]">saldo {entry.balanceAfter}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </Card>
 
         <Card className="p-6">

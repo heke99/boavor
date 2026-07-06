@@ -1,11 +1,12 @@
 import { LegalPage } from '@/components/ui/LegalPage'
+import { getLegalDocument } from '@/lib/legal/versions'
 
 export default function CookiesPage() {
   return (
     <LegalPage
       title="Cookiepolicy"
       description="Denna policy förklarar hur Bovaro använder cookies och liknande tekniker."
-      updatedAt="2026-05-09"
+      updatedAt={getLegalDocument('cookies').version}
       sections={[
         {
           title: 'Vad cookies är',

@@ -1,11 +1,12 @@
 import { LegalPage } from '@/components/ui/LegalPage'
+import { getLegalDocument } from '@/lib/legal/versions'
 
 export default function AdvertiserTermsPage() {
   return (
     <LegalPage
       title="Annonsörsvillkor"
       description="Villkor för privatpersoner och företag som publicerar bostadsobjekt på Bovaro."
-      updatedAt="2026-05-09"
+      updatedAt={getLegalDocument('advertiser_terms').version}
       sections={[
         {
           title: 'Vem som omfattas',

@@ -43,6 +43,15 @@ type ListingRow = {
   has_elevator?: boolean | null
   has_parking?: boolean | null
   pets_allowed?: boolean | null
+  is_student_housing?: boolean | null
+  is_senior_housing?: boolean | null
+  is_short_term?: boolean | null
+  has_accessibility?: boolean | null
+  application_deadline?: string | null
+  viewing_info?: string | null
+  policy_summary?: string | null
+  hide_exact_address?: boolean | null
+  show_applicant_count?: boolean | null
   workplaces?: number | null
   meeting_rooms?: number | null
   is_furnished?: boolean | null
@@ -90,13 +99,15 @@ type ListingRow = {
   listing_features?: Array<{
     feature_label: string
   }>
-  rental_requirements?: Array<{
+  // listings -> rental_requirements is one-to-one (listing_id is PK+FK), so
+  // PostgREST embeds a single object.
+  rental_requirements?: {
     min_income: number | null
     pets_allowed: boolean
     smoking_allowed: boolean
     references_required: boolean
     employment_required: boolean
-  }>
+  } | null
 }
 
 const FALLBACK_IMAGE =
@@ -179,16 +190,27 @@ function mapListingCard(row: ListingRow): ListingCardItem {
     occupancyRate: toNullableNumber(row.occupancy_rate),
     vacancyRate: toNullableNumber(row.vacancy_rate),
     isVerified: row.is_verified,
+    isStudentHousing: Boolean(row.is_student_housing),
+    isSeniorHousing: Boolean(row.is_senior_housing),
+    isShortTerm: Boolean(row.is_short_term),
+    hasAccessibility: Boolean(row.has_accessibility),
   }
 }
 
 function mapListingDetail(row: ListingRow): ListingDetailItem {
-  const rentalRequirement = row.rental_requirements?.[0] ?? null
+  const rentalRequirement = row.rental_requirements ?? null
+  const hideExactAddress = Boolean(row.hide_exact_address)
 
   return {
     ...mapListingCard(row),
     description: row.description ?? '',
-    street: row.street,
+    // Address privacy: landlords may hide the exact street publicly.
+    street: hideExactAddress ? null : row.street,
+    applicationDeadline: row.application_deadline ?? null,
+    viewingInfo: row.viewing_info ?? null,
+    policySummary: row.policy_summary ?? null,
+    hideExactAddress,
+    showApplicantCount: Boolean(row.show_applicant_count),
     zipCode: row.zip_code,
     country: row.country,
     floor: row.floor,
@@ -247,6 +269,15 @@ function queryBaseListings(supabase: NonNullable<Awaited<ReturnType<typeof creat
       has_elevator,
       has_parking,
       pets_allowed,
+      is_student_housing,
+      is_senior_housing,
+      is_short_term,
+      has_accessibility,
+      application_deadline,
+      viewing_info,
+      policy_summary,
+      hide_exact_address,
+      show_applicant_count,
       workplaces,
       meeting_rooms,
       is_furnished,
@@ -351,6 +382,10 @@ function applyFilters<T>(builder: T, filters: SearchFilters): T {
   query = applyBooleanFilter(query, 'has_elevator', filters.hasElevator)
   query = applyBooleanFilter(query, 'has_parking', filters.hasParking)
   query = applyBooleanFilter(query, 'pets_allowed', filters.petsAllowed)
+  query = applyBooleanFilter(query, 'is_student_housing', filters.student)
+  query = applyBooleanFilter(query, 'is_senior_housing', filters.senior)
+  query = applyBooleanFilter(query, 'is_short_term', filters.shortTerm)
+  query = applyBooleanFilter(query, 'has_accessibility', filters.accessibility)
   query = applyBooleanFilter(query, 'is_vat_applicable', filters.isVatApplicable)
   query = applyBooleanFilter(query, 'is_furnished', filters.isFurnished)
   query = applyBooleanFilter(query, 'has_reception', filters.hasReception)
@@ -409,6 +444,30 @@ export async function getPublishedListings(filters: SearchFilters = {}, options?
   return (data ?? []).map((row) => mapListingCard(row as ListingRow))
 }
 
+/** Published listings for one company (tenant portals); optional city scope. */
+export async function getPublishedCompanyListings(companyId: string, cities: string[] = [], limit = 60) {
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) return [] as ListingCardItem[]
+
+  let builder = queryBaseListings(supabase)
+    .eq('status', 'published')
+    .eq('company_id', companyId)
+    .order('published_at', { ascending: false })
+    .limit(limit)
+
+  if (cities.length > 0) {
+    builder = builder.in('city', cities)
+  }
+
+  const { data, error } = await builder
+  if (error) {
+    console.error('Failed to fetch portal listings', error)
+    return []
+  }
+
+  return (data ?? []).map((row) => mapListingCard(row as ListingRow))
+}
+
 export async function getListingBySlug(slug: string) {
   const supabase = await createSupabaseServerClient()
   if (!supabase) return null
@@ -425,6 +484,36 @@ export async function getListingBySlug(slug: string) {
 
   if (!data) return null
   return mapListingDetail(data as ListingRow)
+}
+
+export type ListingPublicStats = {
+  applicantCount: number | null
+  queuePosition: { points: number; position: number; totalApplicants: number } | null
+}
+
+/**
+ * Public listing stats: applicant count (only when the landlord allows it)
+ * and the signed-in user's estimated queue position among applicants.
+ */
+export async function getListingPublicStats(listingId: string): Promise<ListingPublicStats> {
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) return { applicantCount: null, queuePosition: null }
+
+  const [countResult, positionResult] = await Promise.all([
+    supabase.rpc('public_listing_applicant_count', { p_listing_id: listingId }),
+    supabase.rpc('estimated_queue_position', { p_listing_id: listingId }),
+  ])
+
+  const position = positionResult.data as
+    | { points: number; position: number; total_applicants: number }
+    | null
+
+  return {
+    applicantCount: countResult.data ?? null,
+    queuePosition: position
+      ? { points: position.points, position: position.position, totalApplicants: position.total_applicants }
+      : null,
+  }
 }
 
 export async function getRelatedListings(listing: ListingDetailItem, limit = 3) {

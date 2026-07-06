@@ -31,6 +31,9 @@ export type AdminCompanyRow = {
   legalForm: string | null
   businessPurpose: string | null
   verificationStatus: 'pending' | 'verified' | 'rejected' | string
+  verificationNote: string | null
+  verifiedAt: string | null
+  verifiedBy: string | null
   createdAt: string
   listingsCount: number
   membersCount: number
@@ -161,7 +164,7 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
 
   let query = supabase
     .from('companies')
-    .select('id, name, slug, organization_number, org_number, email, phone, city, legal_form, business_purpose, verification_status, created_at')
+    .select('id, name, slug, organization_number, org_number, email, phone, city, legal_form, business_purpose, verification_status, verification_note, verified_at, verified_by, created_at')
     .order('created_at', { ascending: false })
 
   if (params.q) query = query.or(`name.ilike.${like(params.q)},organization_number.ilike.${like(params.q)},org_number.ilike.${like(params.q)},email.ilike.${like(params.q)}`)
@@ -198,6 +201,9 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
     legal_form: string | null
     business_purpose: string | null
     verification_status: string
+    verification_note?: string | null
+    verified_at?: string | null
+    verified_by?: string | null
     created_at: string
   }>).map((row) => ({
     id: row.id,
@@ -210,6 +216,9 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
     legalForm: row.legal_form,
     businessPurpose: row.business_purpose,
     verificationStatus: row.verification_status,
+    verificationNote: row.verification_note ?? null,
+    verifiedAt: row.verified_at ?? null,
+    verifiedBy: row.verified_by ?? null,
     createdAt: row.created_at,
     listingsCount: listingCounts.get(row.id) ?? 0,
     membersCount: memberCounts.get(row.id) ?? 0,
@@ -225,8 +234,8 @@ export async function getAdminListings(params: { q?: string; segment?: string; s
     .order('created_at', { ascending: false })
 
   if (params.q) query = query.or(`title.ilike.${like(params.q)},city.ilike.${like(params.q)}`)
-  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment)
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment as ListingSegment)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as ListingStatus)
   if (params.ownerType === 'company') query = query.not('company_id', 'is', null)
   if (params.ownerType === 'private') query = query.is('company_id', null)
 
@@ -289,7 +298,7 @@ export async function getAdminApplications(params: { q?: string; status?: string
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as RentalApplicationStatus)
 
   const { data, error } = await query
   if (error) {
@@ -342,8 +351,8 @@ export async function getAdminInquiries(params: { q?: string; status?: string; s
     .order('created_at', { ascending: false })
     .limit(200)
 
-  if (params.status && params.status !== 'all') query = query.eq('status', params.status)
-  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment)
+  if (params.status && params.status !== 'all') query = query.eq('status', params.status as InquiryStatus)
+  if (params.segment && params.segment !== 'all') query = query.eq('listing_segment', params.segment as ListingSegment)
 
   const { data, error } = await query
   if (error) {
@@ -419,4 +428,100 @@ export async function getAdminOverview(): Promise<AdminOverviewData> {
     latestListings: listings.slice(0, 6),
     pendingCompanies: companies.filter((company) => company.verificationStatus === 'pending').slice(0, 6),
   }
+}
+
+export async function getAdminAuditLogs(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('admin_audit_logs')
+    .select('id, admin_user_id, action, target_type, target_id, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch admin audit logs', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    admin_user_id: string | null
+    action: string
+    target_type: string
+    target_id: string | null
+    metadata: Record<string, unknown>
+    created_at: string
+  }>
+}
+
+export async function getAdminPrivacyRequests(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('privacy_requests')
+    .select('id, user_id, request_type, status, message, handled_by, handled_at, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch privacy requests', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    user_id: string
+    request_type: string
+    status: string
+    message: string | null
+    handled_by: string | null
+    handled_at: string | null
+    created_at: string
+  }>
+}
+
+export async function getAdminRateLimitEvents(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('rate_limit_events')
+    .select('id, scope, subject_hash, ip_hash, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch rate limit events', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    scope: string
+    subject_hash: string
+    ip_hash: string | null
+    created_at: string
+  }>
+}
+
+export async function getAdminDocumentAccessLogs(limit = 80) {
+  const { supabase } = await getAdminClient()
+  const { data, error } = await supabase
+    .from('document_access_logs')
+    .select('id, document_id, application_document_id, actor_user_id, owner_user_id, access_type, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch document access logs', error)
+    return []
+  }
+
+  return (data ?? []) as Array<{
+    id: string
+    document_id: string | null
+    application_document_id: string | null
+    actor_user_id: string | null
+    owner_user_id: string | null
+    access_type: string
+    metadata: Record<string, unknown>
+    created_at: string
+  }>
 }

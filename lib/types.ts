@@ -35,12 +35,27 @@ export type AppRole =
 
 export type ListingStatus = 'draft' | 'published' | 'paused' | 'rented' | 'sold' | 'archived'
 export type RentalApplicationStatus =
+  | 'draft'
   | 'submitted'
+  | 'screening'
+  | 'qualified'
+  | 'not_qualified'
   | 'reviewing'
   | 'shortlisted'
+  | 'viewing_invited'
+  | 'viewing_booked'
   | 'offered'
+  | 'offer_accepted'
+  | 'contract_pending'
+  | 'signed'
   | 'rejected'
   | 'withdrawn'
+  | 'expired'
+  | 'rented_to_other'
+  // Legacy values from the original live enum (normalized by the status machine)
+  | 'received'
+  | 'reserve'
+  | 'viewing'
 
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired' | 'trialing'
 
@@ -88,6 +103,10 @@ export type ListingCardItem = {
   occupancyRate?: number | null
   vacancyRate?: number | null
   isVerified?: boolean
+  isStudentHousing?: boolean
+  isSeniorHousing?: boolean
+  isShortTerm?: boolean
+  hasAccessibility?: boolean
 }
 
 export type ListingDetailItem = ListingCardItem & {
@@ -100,6 +119,11 @@ export type ListingDetailItem = ListingCardItem & {
   monthlyFee: number | null
   latitude: number | null
   longitude: number | null
+  applicationDeadline: string | null
+  viewingInfo: string | null
+  policySummary: string | null
+  hideExactAddress: boolean
+  showApplicantCount: boolean
   images: Array<{
     id: string
     imageUrl: string
@@ -162,6 +186,10 @@ export type SearchFilters = {
   minCapRate?: string
   minOccupancyRate?: string
   maxVacancyRate?: string
+  student?: string
+  senior?: string
+  shortTerm?: string
+  accessibility?: string
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'area_desc'
 }
 
@@ -183,6 +211,8 @@ export type SavedSearchItem = {
   createdAt: string
 }
 
+export type CoApplicantInviteStatus = 'none' | 'invited' | 'accepted' | 'declined'
+
 export type CoApplicantItem = {
   id: string
   fullName: string
@@ -190,16 +220,32 @@ export type CoApplicantItem = {
   phone: string | null
   relationship: string | null
   createdAt: string
+  inviteStatus?: CoApplicantInviteStatus
+  inviteToken?: string | null
+  consentedAt?: string | null
 }
+
+export type GuarantorItem = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  relationship: string | null
+  monthlyIncome: number | null
+  createdAt: string
+}
+
+export type ProfileDocumentStatus = 'active' | 'expired' | 'replaced' | 'rejected' | 'pending_review'
 
 export type ProfileDocumentItem = {
   id: string
   fileName: string
   fileUrl: string
   documentType: string
-  documentStatus?: 'active' | 'expired' | 'replaced'
+  documentStatus?: ProfileDocumentStatus
   documentExpiresAt?: string | null
   isDefaultForApplications?: boolean
+  rejectionReason?: string | null
   createdAt: string
 }
 
@@ -230,7 +276,7 @@ export type DashboardProfileItem = {
   phone: string
   role: AppRole
   accountType?: AccountType
-  personalIdentityNumber?: string | null
+  identityVerifiedAt?: string | null
   preferredListingIntent?: PreferredListingIntent
   termsAcceptedAt?: string | null
   privacyAcceptedAt?: string | null
@@ -239,12 +285,19 @@ export type DashboardProfileItem = {
   city: string
   householdSize: number | null
   hasPets: boolean
+  smoking?: boolean
   employmentStatus: string
   employerName: string
   monthlyIncome: number | null
+  incomeType?: string | null
+  studyStatus?: string | null
+  currentHousingSituation?: string | null
+  personalLetter?: string | null
+  guarantorAvailable?: boolean
   desiredMoveIn: string | null
   desiredLocations: string[]
   coApplicants: CoApplicantItem[]
+  guarantors?: GuarantorItem[]
   documents: ProfileDocumentItem[]
   queueMembership: QueueMembershipItem | null
   companies: CompanyMembershipItem[]
@@ -256,7 +309,6 @@ export type ProfileFormValues = {
   phone: string
   role: AppRole
   accountType?: AccountType
-  personalIdentityNumber?: string | null
   preferredListingIntent?: PreferredListingIntent
   termsAcceptedAt?: string | null
   privacyAcceptedAt?: string | null
@@ -272,6 +324,8 @@ export type ProfileFormValues = {
   desiredLocations: string[]
 }
 
+export type MatchkollResultValue = 'eligible' | 'likely_eligible' | 'missing_info' | 'not_eligible'
+
 export type RentalApplicationItem = {
   id: string
   listingId?: string | null
@@ -282,6 +336,10 @@ export type RentalApplicationItem = {
   queueJoinedAtSnapshot: string | null
   applicantsCountForListing?: number
   applicantScore?: number
+  policyResult?: MatchkollResultValue | null
+  randomRank?: number | null
+  rejectionReason?: string | null
+  history?: Array<{ fromStatus: string | null; toStatus: string; note: string | null; createdAt: string }>
   listing: {
     slug: string
     title: string
@@ -351,11 +409,15 @@ export type ListingRentalRequirementItem = {
   referencesRequired: boolean
 }
 
+export type SelectionMethodValue = 'strict_queue' | 'guided_queue' | 'first_come' | 'random' | 'manual_with_policy'
+
 export type ManagedListingDetailItem = ManagedListingItem & {
   description: string | null
   street: string | null
   areaName: string | null
   availableFrom: string | null
+  selectionMethod?: SelectionMethodValue
+  applicationDeadlineAt?: string | null
   images: Array<{ id: string; imageUrl: string; altText: string | null; isCover: boolean; position: number }>
   applications: RentalApplicationItem[]
   inquiries: ListingInquiryItem[]
@@ -381,6 +443,15 @@ export type ListingEditItem = ManagedListingDetailItem & {
   coverImageUrl?: string | null
   features: string[]
   rentalRequirements: ListingRentalRequirementItem | null
+  isStudentHousing?: boolean
+  isSeniorHousing?: boolean
+  isShortTerm?: boolean
+  hasAccessibility?: boolean
+  applicationDeadline?: string | null
+  viewingInfo?: string | null
+  policySummary?: string | null
+  hideExactAddress?: boolean
+  showApplicantCount?: boolean
 }
 
 export type ListingInquiryItem = {

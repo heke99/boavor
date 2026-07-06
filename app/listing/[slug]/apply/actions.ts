@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getApplyPageData, buildApplicantFullName } from '@/lib/data/rental-applications'
+import { requireVerifiedAdult } from '@/lib/data/identity'
+import { recordConsent } from '@/lib/consents/consents'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/data/queue'
+import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
+import { runMatchkoll } from '@/lib/data/matchkoll'
+import { trackEvent } from '@/lib/analytics/track'
+import { getMaintenanceMode } from '@/lib/platform/maintenance'
+import { logError } from '@/lib/log'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -16,23 +25,98 @@ export async function submitRentalApplication(formData: FormData) {
   const employmentType = String(formData.get('employmentType') ?? '').trim() || null
   const pets = formData.get('pets') === 'on'
   const smoking = formData.get('smoking') === 'on'
+  const dataSharingConsent = formData.get('dataSharingConsent') === 'on'
+
+  // Maintenance mode closes the application write flow (banner explains why).
+  const maintenance = await getMaintenanceMode()
+  if (maintenance.enabled) {
+    redirect(`/listing/${slug}/apply?error=maintenance`)
+  }
 
   const { supabase, user } = await (await import('@/lib/data/rental-applications')).requireSignedInUser()
   const { listing, profile } = await getApplyPageData(slug)
 
+  // Identity gate: applying requires a verified identity and age >= 18.
+  const identity = await requireVerifiedAdult(user.id)
+  if (!identity.verified) {
+    redirect(`/listing/${slug}/apply?error=identity_required`)
+  }
+  if (!identity.adult) {
+    redirect(`/listing/${slug}/apply?error=underage`)
+  }
+
+  if (!dataSharingConsent) {
+    redirect(`/listing/${slug}/apply?error=consent_required`)
+  }
+
+  // Active application limit (server-side; the UI warning is cosmetic).
+  const limitCheck = await getApplicationLimitCheck(supabase, user.id)
+  if (!limitCheck.canApply) {
+    redirect(`/listing/${slug}/apply?error=limit_reached`)
+  }
+
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'rental_application',
+    subject: `${user.id}:${listing.slug}`,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  })
+
+  if (!allowed) {
+    redirect(`/listing/${slug}/apply?error=rate_limited`)
+  }
+
   const { data: owner } = await supabase
     .from('listings')
-    .select('id, created_by, company_id')
+    .select('id, created_by, company_id, application_deadline')
     .eq('slug', listing.slug)
-    .maybeSingle<{ id: string; created_by: string | null; company_id: string | null }>()
+    .maybeSingle<{ id: string; created_by: string | null; company_id: string | null; application_deadline: string | null }>()
+
+  // listing_id is NOT NULL in the database; without an owning listing row the
+  // application cannot be stored.
+  if (!owner?.id) {
+    redirect(`/listing/${slug}/apply?error=failed`)
+  }
+
+  // Applications close automatically after the deadline.
+  if (owner.application_deadline && new Date(owner.application_deadline).getTime() < Date.now()) {
+    redirect(`/listing/${slug}/apply?error=deadline_passed`)
+  }
+
+  const { data: existingApplication } = await supabase
+    .from('rental_applications')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('listing_id', owner.id)
+    .neq('status', 'withdrawn')
+    .limit(1)
+    .maybeSingle<{ id: string }>()
+
+  if (existingApplication) {
+    redirect('/dashboard/applications?duplicate=1')
+  }
+
+  // Household queue rule: with linked, accepted co-applicants the effective
+  // queue points follow the configured rule (default: highest in household).
+  const ownPoints = profile.queueMembership?.currentPoints ?? 0
+  const selectedCoApplicantSet = new Set(selectedCoApplicants)
+  const linkedCoApplicantPoints =
+    selectedCoApplicants.length > 0
+      ? await getHouseholdCoApplicantPoints(supabase)
+      : []
+  const effectiveQueuePoints = resolveHouseholdQueuePoints(
+    DEFAULT_HOUSEHOLD_QUEUE_RULE,
+    ownPoints,
+    selectedCoApplicantSet.size > 0 ? linkedCoApplicantPoints : [],
+  )
 
   const { data: created, error } = await supabase
     .from('rental_applications')
     .insert({
       user_id: user.id,
-      listing_id: owner?.id ?? null,
-      landlord_user_id: owner?.created_by ?? null,
-      landlord_company_id: owner?.company_id ?? null,
+      listing_id: owner.id,
+      landlord_user_id: owner.created_by ?? null,
+      landlord_company_id: owner.company_id ?? null,
       listing_slug: listing.slug,
       listing_title: listing.title,
       listing_city: listing.city,
@@ -44,7 +128,7 @@ export async function submitRentalApplication(formData: FormData) {
       applicant_phone: profile.phone || null,
       applicant_monthly_income: monthlyIncomeValue ? Number(monthlyIncomeValue) : profile.monthlyIncome,
       applicant_household_size: householdSizeValue ? Number(householdSizeValue) : profile.householdSize,
-      queue_points_snapshot: profile.queueMembership?.currentPoints ?? 0,
+      queue_points_snapshot: effectiveQueuePoints,
       queue_joined_at_snapshot: profile.queueMembership?.joinedQueueAt ?? null,
       cover_letter: coverLetter,
       move_in_date: moveInDate,
@@ -60,9 +144,57 @@ export async function submitRentalApplication(formData: FormData) {
     .single()
 
   if (error || !created) {
-    console.error('Failed to create rental application', error)
-    return
+    logError('Failed to create rental application', error)
+    redirect(`/listing/${slug}/apply?error=failed`)
   }
+
+  await recordConsent(supabase, { userId: user.id, consentType: 'application_data_sharing', source: 'apply' })
+  if (selectedDocuments.length > 0) {
+    await recordConsent(supabase, { userId: user.id, consentType: 'document_sharing', source: 'apply' })
+  }
+
+  // Server-side policy evaluation (Matchkoll) with immutable result snapshot.
+  const matchkollRun = await runMatchkoll(supabase, {
+    userId: user.id,
+    listingId: owner.id,
+    rentAmount: listing.price,
+    context: 'application',
+  })
+
+  if (matchkollRun) {
+    const { data: latestEvaluation } = await supabase
+      .from('policy_evaluations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('listing_id', owner.id)
+      .eq('context', 'application')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    await supabase.from('application_policy_results').insert({
+      application_id: created.id,
+      evaluation_id: latestEvaluation?.id ?? null,
+      result: matchkollRun.evaluation.result,
+      outcomes: JSON.parse(JSON.stringify(matchkollRun.evaluation.outcomes)),
+    })
+  }
+
+  // Immutable snapshot of the applicant profile at submission time. Future
+  // profile edits must never mutate what the landlord saw.
+  await supabase.from('application_profile_snapshots').insert({
+    application_id: created.id,
+    user_id: user.id,
+    snapshot_version: 1,
+    snapshot: JSON.parse(
+      JSON.stringify({
+        profile,
+        selected_co_applicant_ids: selectedCoApplicants,
+        selected_document_ids: selectedDocuments,
+        submitted_at: new Date().toISOString(),
+      }),
+    ),
+  })
 
   if (selectedCoApplicants.length > 0) {
     const { data: coApplicants } = await supabase
@@ -109,6 +241,28 @@ export async function submitRentalApplication(formData: FormData) {
     user_id: user.id,
     title: 'Ansökan skickad',
     body: `Din ansökan för ${listing.title} har skickats och sparats i Bovaro.`,
+  })
+
+  await trackEvent('application_submitted', {
+    listingId: owner.id,
+    metadata: { city: listing.city, listing_type: listing.listingType },
+  })
+
+  // Outbound webhook for the landlord's integrations (fan-out via definer
+  // function; no-op when the landlord has no matching endpoints).
+  await supabase.rpc('enqueue_webhook_event', {
+    p_event_type: 'application.created',
+    // SQL accepts null for both owner args; the generated types do not.
+    p_company_id: owner.company_id as string,
+    p_owner_user_id: owner.created_by as string,
+    p_payload: {
+      application_id: created.id,
+      listing_id: owner.id,
+      listing_slug: listing.slug,
+      listing_title: listing.title,
+      status: 'submitted',
+      created_at: new Date().toISOString(),
+    },
   })
 
   revalidatePath('/dashboard/applications')

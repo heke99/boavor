@@ -11,12 +11,17 @@ import {
   Ruler,
   ShieldCheck,
 } from 'lucide-react'
-import { getListingBySlug, getRelatedListings } from '@/lib/data/listings'
+import { getListingBySlug, getListingPublicStats, getRelatedListings } from '@/lib/data/listings'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { ListingGrid } from '@/components/listings/ListingGrid'
+import { MatchkollCard } from '@/components/listings/MatchkollCard'
 import { Card } from '@/components/ui/Card'
 import { getListingPrimaryMeta, isRentalApplicationListing, listingTypeLabels } from '@/lib/listing-options'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLatestPrecheck, hasPlusEntitlement, type StoredEvaluation } from '@/lib/data/matchkoll'
+import { requireVerifiedAdult } from '@/lib/data/identity'
+import { trackEvent } from '@/lib/analytics/track'
 import { submitListingInquiry } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -58,14 +63,89 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
     notFound()
   }
 
-  const related = await getRelatedListings(listing, 3)
   const usesApplication = isRentalApplicationListing(listing.listingSegment, listing.listingType)
+  const [related, publicStats] = await Promise.all([
+    getRelatedListings(listing, 3),
+    usesApplication ? getListingPublicStats(listing.id) : Promise.resolve({ applicantCount: null, queuePosition: null }),
+    trackEvent('listing_view', { listingId: listing.id }),
+  ])
+
+  // Matchkoll state for the signed-in user.
+  let matchkollUser: { isSignedIn: boolean; isVerified: boolean; hasPlus: boolean } = {
+    isSignedIn: false,
+    isVerified: false,
+    hasPlus: false,
+  }
+  let matchkollEvaluation: StoredEvaluation | null = null
+  if (usesApplication) {
+    const supabase = await createSupabaseServerClient()
+    if (supabase) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const [identity, plus, evaluation] = await Promise.all([
+          requireVerifiedAdult(user.id),
+          hasPlusEntitlement(supabase, user.id),
+          getLatestPrecheck(supabase, user.id, listing.id),
+        ])
+        matchkollUser = { isSignedIn: true, isVerified: identity.verified, hasPlus: plus }
+        matchkollEvaluation = evaluation
+      }
+    }
+  }
+  const matchkollStatus = typeof sp.matchkoll === 'string' ? sp.matchkoll : null
+  const matchkollMessage =
+    matchkollStatus === 'identity_required'
+      ? 'Verifiera din identitet för att kunna köra Matchkoll.'
+      : matchkollStatus === 'rate_limited'
+        ? 'Du har kört Matchkoll många gånger nyligen. Vänta en stund och försök igen.'
+        : matchkollStatus === 'profile_required'
+          ? 'Fyll i din profil innan du kör Matchkoll.'
+          : null
+
+  const renderedAt = new Date()
+  const deadlinePassed = listing.applicationDeadline
+    ? new Date(listing.applicationDeadline) < renderedAt
+    : false
   const primaryMeta = getListingPrimaryMeta(listing.listingSegment, listing.commercialType)
   const inquirySent = sp.inquiry === 'sent'
+  const inquiryError =
+    sp.inquiry === 'invalid'
+      ? 'Fyll i namn och en giltig e-postadress.'
+      : sp.inquiry === 'rate_limited'
+        ? 'Du har skickat flera intresseanmälningar nyligen. Vänta en stund och försök igen.'
+        : sp.inquiry === 'failed'
+          ? 'Intresseanmälan kunde inte skickas just nu.'
+          : null
   const gallery = listing.images.length ? listing.images : [{ id: listing.id, imageUrl: listing.imageUrl, altText: listing.title, isCover: true, position: 0 }]
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: listing.title,
+    description: listing.description,
+    url: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.bovaro.se'}/listing/${listing.slug}`,
+    image: gallery.map((image) => image.imageUrl),
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: listing.street ?? undefined,
+      postalCode: listing.zipCode ?? undefined,
+      addressLocality: listing.city,
+      addressCountry: listing.country ?? 'SE',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: listing.price,
+      priceCurrency: 'SEK',
+      availability: listing.status === 'published' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    floorSize: listing.areaSqm ? { '@type': 'QuantitativeValue', value: listing.areaSqm, unitCode: 'MTK' } : undefined,
+    numberOfRooms: listing.rooms || undefined,
+  }
 
   return (
     <section className="container-shell py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
         <div>
           <div className="relative h-[420px] overflow-hidden rounded-[34px] bg-[#f3f4f6]">
@@ -90,7 +170,18 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
             <div className="mt-4 flex items-center gap-2 text-sm text-[#5b6475]">
               <MapPinned size={15} />
               {[listing.street, listing.areaName, listing.city].filter(Boolean).join(', ')}
+              {listing.hideExactAddress ? (
+                <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">Exakt adress visas senare i processen</span>
+              ) : null}
             </div>
+            {(listing.isStudentHousing || listing.isSeniorHousing || listing.isShortTerm || listing.hasAccessibility) ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {listing.isStudentHousing ? <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#4338ca]">Studentbostad</span> : null}
+                {listing.isSeniorHousing ? <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-semibold text-[#4338ca]">Seniorbostad</span> : null}
+                {listing.isShortTerm ? <span className="rounded-full bg-[#fef3c7] px-3 py-1 text-xs font-semibold text-[#92400e]">Korttidskontrakt</span> : null}
+                {listing.hasAccessibility ? <span className="rounded-full bg-[#ecfdf5] px-3 py-1 text-xs font-semibold text-[#047857]">Tillgänglighetsanpassad</span> : null}
+              </div>
+            ) : null}
             <div className="mt-6 text-3xl font-semibold text-[var(--primary)]">{formatCurrency(listing.price, listing.listingType)}</div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -153,6 +244,39 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
                   <FactCard label="Referenser krävs" value={yesNo(listing.rentalRequirements.referencesRequired)} />
                   <FactCard label="Husdjur" value={listing.rentalRequirements.petsAllowed ? 'Tillåtet' : 'Ej angivet'} />
                 </div>
+                {listing.policySummary ? (
+                  <p className="mt-4 rounded-2xl bg-[#f7f8fc] p-4 text-sm leading-7 text-[#5b6475]">{listing.policySummary}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {usesApplication ? (
+              <div className="mt-6 rounded-[30px] border border-black/8 bg-white p-6 shadow-[0_10px_30px_rgba(13,17,32,0.05)]">
+                <h2 className="text-2xl font-semibold text-[#111827]">Så går uthyrningen till</h2>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <FactCard
+                    label="Sista ansökningsdag"
+                    value={
+                      listing.applicationDeadline
+                        ? `${formatDate(listing.applicationDeadline)}${deadlinePassed ? ' (passerad)' : ''}`
+                        : 'Löpande urval'
+                    }
+                  />
+                  <FactCard label="Visning" value={listing.viewingInfo || 'Information kommer från hyresvärden'} />
+                  {publicStats.applicantCount !== null ? (
+                    <FactCard label="Antal sökande" value={`${publicStats.applicantCount} st`} />
+                  ) : null}
+                  {publicStats.queuePosition ? (
+                    <FactCard
+                      label="Din uppskattade köplats"
+                      value={`Plats ${publicStats.queuePosition.position} (${publicStats.queuePosition.points} poäng)`}
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-4 text-sm leading-7 text-[#5b6475]">
+                  Du ansöker med din Bovaro-profil. Hyresvärden ser din ansökan med kötid, inkomst och valda dokument
+                  och gör ett urval utifrån sina krav. Du kan följa status under Ansökningar i din översikt.
+                </p>
               </div>
             ) : null}
 
@@ -191,9 +315,15 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
             </div>
             <div className="mt-6 space-y-3">
               {usesApplication ? (
-                <Button href={`/listing/${listing.slug}/apply`} className="w-full">
-                  Ansök om bostaden
-                </Button>
+                deadlinePassed ? (
+                  <div className="rounded-2xl bg-[#f3f4f6] p-4 text-center text-sm font-semibold text-[#6b7280]">
+                    Ansökningstiden har gått ut
+                  </div>
+                ) : (
+                  <Button href={`/listing/${listing.slug}/apply`} className="w-full">
+                    Ansök om bostaden
+                  </Button>
+                )
               ) : null}
               <Button href="/dashboard/favorites" variant="ghost" className="w-full border border-black/8">
                 Spara som favorit
@@ -201,12 +331,28 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
             </div>
           </Card>
 
+          {usesApplication ? (
+            <MatchkollCard
+              slug={listing.slug}
+              isSignedIn={matchkollUser.isSignedIn}
+              isVerified={matchkollUser.isVerified}
+              hasPlus={matchkollUser.hasPlus}
+              evaluation={matchkollEvaluation}
+              statusMessage={matchkollMessage}
+            />
+          ) : null}
+
           {!usesApplication ? (
             <Card className="p-6">
               <h3 className="text-xl font-semibold text-[#111827]">Kontakta annonsören</h3>
               {inquirySent ? (
                 <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
                   Din intresseanmälan är skickad.
+                </div>
+              ) : null}
+              {inquiryError ? (
+                <div className="mt-4 rounded-2xl bg-[#fef2f2] p-4 text-sm font-semibold text-[#b91c1c]">
+                  {inquiryError}
                 </div>
               ) : null}
               <form action={submitListingInquiry} className="mt-5 space-y-4">

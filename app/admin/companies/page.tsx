@@ -53,17 +53,20 @@ export default async function AdminCompaniesPage({ searchParams }: Props) {
                   <span className="rounded-full bg-[#f3f4f6] px-3 py-1">{company.businessPurpose ?? 'syfte saknas'}</span>
                   <span className="rounded-full bg-[#f3f4f6] px-3 py-1">{company.listingsCount} objekt</span>
                   <span className="rounded-full bg-[#f3f4f6] px-3 py-1">{company.membersCount} medlemmar</span>
+                  {company.verifiedAt ? <span className="rounded-full bg-[#ecfdf3] px-3 py-1 text-[#166534]">Verifierad {new Date(company.verifiedAt).toLocaleDateString('sv-SE')}</span> : null}
                 </div>
+                {company.verificationNote ? <p className="mt-3 rounded-2xl bg-[#f7f8fc] p-3 text-sm text-[#5b6475]">Adminnotering: {company.verificationNote}</p> : null}
               </div>
 
-              <form action={updateCompanyVerificationAction} className="flex min-w-[310px] gap-2">
+              <form action={updateCompanyVerificationAction} className="grid min-w-[320px] gap-2">
                 <input type="hidden" name="companyId" value={company.id} />
                 <Select name="verificationStatus" defaultValue={company.verificationStatus} className="h-12 rounded-2xl border-[#d7dbe7]">
                   <option value="pending">Väntar</option>
                   <option value="verified">Verifierad</option>
                   <option value="rejected">Avvisad</option>
                 </Select>
-                <Button className="h-12">Spara</Button>
+                <Input name="verificationNote" defaultValue={company.verificationNote ?? ''} placeholder="Verifieringsnotering" className="h-12 rounded-2xl border-[#d7dbe7]" />
+                <Button className="h-12">Spara verifiering</Button>
               </form>
             </div>
           </Card>

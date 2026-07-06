@@ -1,11 +1,12 @@
 import { LegalPage } from '@/components/ui/LegalPage'
+import { getLegalDocument } from '@/lib/legal/versions'
 
 export default function TermsPage() {
   return (
     <LegalPage
       title="Allmänna villkor"
       description="Dessa villkor reglerar användningen av Bovaro för privatpersoner och företag. Texten är en tydlig grundversion och bör granskas juridiskt innan skarp lansering."
-      updatedAt="2026-05-09"
+      updatedAt={getLegalDocument('terms').version}
       sections={[
         {
           title: 'Om Bovaro',

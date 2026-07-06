@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { getDashboardProfile } from '@/lib/data/profile'
-import { updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
+import { createPrivacyRequestAction, updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
+import { updateNotificationPreferencesAction } from '@/app/dashboard/notifications/actions'
+import { getAuthContext } from '@/lib/auth/permissions'
+import { PushSettings } from '@/components/pwa/PushSettings'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +17,13 @@ export default async function DashboardSettingsPage() {
   if (!result.isSignedIn || !result.profile) redirect('/login')
 
   const { profile } = result
+
+  const { supabase, user } = await getAuthContext({ loginRedirect: '/login?next=/dashboard/settings' })
+  const { data: emailPreferences } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   return (
     <DashboardShell
@@ -60,6 +70,33 @@ export default async function DashboardSettingsPage() {
         </Card>
 
         <Card className="p-6">
+          <h2 className="text-2xl font-semibold text-[#111827]">E-postnotiser</h2>
+          <p className="mt-2 text-sm leading-6 text-[#6b7280]">
+            Välj vilka händelser som ska skickas till din e-post. Notiser i plattformen påverkas inte.
+          </p>
+          <form action={updateNotificationPreferencesAction} className="mt-6 space-y-3">
+            {[
+              ['emailApplications', 'Ansökningar och statusändringar', emailPreferences?.email_applications ?? true],
+              ['emailMessages', 'Olästa meddelanden', emailPreferences?.email_messages ?? true],
+              ['emailQueue', 'Köpåminnelser (även externa köer)', emailPreferences?.email_queue ?? true],
+              ['emailSavedSearches', 'Bevakningsträffar', emailPreferences?.email_saved_searches ?? true],
+              ['emailByta', 'Bytesmatchningar', emailPreferences?.email_byta ?? true],
+              ['weeklyDigest', 'Veckosammanfattning', emailPreferences?.weekly_digest ?? true],
+              ['emailMarketing', 'Bostadstips och produktnyheter', emailPreferences?.email_marketing ?? false],
+            ].map(([name, label, checked]) => (
+              <label key={String(name)} className="flex items-center gap-3 rounded-2xl border border-[#e8ebf3] px-4 py-3 text-sm font-medium text-[#111827]">
+                <input type="checkbox" name={String(name)} defaultChecked={Boolean(checked)} />
+                {String(label)}
+              </label>
+            ))}
+            <Button variant="secondary">Spara e-postnotiser</Button>
+          </form>
+          <div className="mt-4">
+            <PushSettings />
+          </div>
+        </Card>
+
+        <Card className="p-6">
           <h2 className="text-2xl font-semibold text-[#111827]">Ändra lösenord</h2>
           <p className="mt-2 text-sm leading-6 text-[#6b7280]">Ange nytt lösenord. Det måste vara minst 8 tecken.</p>
           <form action={updatePasswordAction} className="mt-6 space-y-4">
@@ -73,11 +110,32 @@ export default async function DashboardSettingsPage() {
           <h2 className="text-2xl font-semibold text-[#111827]">Integritet och data</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-[#6b7280]">
             <p>Personnummer och dokument ska endast visas där det behövs för bostadsflödet.</p>
-            <p>Kontakta supporten om du vill begära registerutdrag, rättelse eller radering av konto.</p>
+            <p>
+              Du kan ladda ner en kopia av dina uppgifter direkt, eller skicka en begäran om rättelse, begränsning
+              eller radering.
+            </p>
           </div>
-          <div className="mt-5 rounded-2xl bg-[#fffbeb] p-4 text-sm text-[#92400e]">
-            Av säkerhetsskäl hanteras kontoavslut och registerutdrag via verifierad supportbegäran.
-          </div>
+          <a
+            href="/dashboard/settings/export"
+            className="mt-4 inline-flex items-center rounded-2xl border border-[#d7dbe7] bg-white px-5 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#f7f8fc]"
+          >
+            Ladda ner mina uppgifter (JSON)
+          </a>
+          <form action={createPrivacyRequestAction} className="mt-5 space-y-4">
+            <Select name="requestType" defaultValue="export">
+              <option value="export">Registerutdrag</option>
+              <option value="rectification">Rättelse av uppgifter</option>
+              <option value="restriction">Begränsning av behandling</option>
+              <option value="erasure">Radering av konto/data</option>
+            </Select>
+            <textarea
+              name="message"
+              rows={4}
+              placeholder="Beskriv kort vad du vill att supporten hanterar."
+              className="w-full rounded-2xl border border-[#d7dbe7] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#5b3df5] focus:ring-4 focus:ring-[rgba(91,61,245,0.12)]"
+            />
+            <Button variant="ghost" className="border border-[#d7dbe7] !text-[#111827]">Skicka integritetsbegäran</Button>
+          </form>
         </Card>
       </div>
     </DashboardShell>

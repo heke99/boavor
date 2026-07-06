@@ -1,7 +1,12 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { trackEvent } from '@/lib/analytics/track'
+import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri, sanitizeStorageFileName, toStorageUri, validateProfileDocument } from '@/lib/storage'
 import type { AccountType, AppRole, CompanyType, LegalForm, PreferredListingIntent } from '@/lib/types'
 
 const COMPANY_ROLES: AppRole[] = ['landlord', 'broker', 'company_admin']
@@ -47,14 +52,19 @@ export async function saveProfileAction(formData: FormData) {
     city: String(formData.get('city') ?? '').trim(),
     role,
     account_type: String(formData.get('accountType') ?? 'private') as AccountType,
-    personal_identity_number: String(formData.get('personalIdentityNumber') ?? '').trim() || null,
     preferred_listing_intent: String(formData.get('preferredListingIntent') ?? 'both') as PreferredListingIntent,
     marketing_consent: formData.get('marketingConsent') === 'on',
     household_size: Number(formData.get('householdSize') ?? 1) || null,
     has_pets: formData.get('hasPets') === 'on',
+    smoking: formData.get('smoking') === 'on',
     employment_status: String(formData.get('employmentStatus') ?? '').trim(),
     employer_name: String(formData.get('employerName') ?? '').trim(),
     monthly_income: Number(formData.get('monthlyIncome') ?? 0) || null,
+    income_type: String(formData.get('incomeType') ?? '').trim() || null,
+    study_status: String(formData.get('studyStatus') ?? '').trim() || null,
+    current_housing_situation: String(formData.get('currentHousingSituation') ?? '').trim() || null,
+    personal_letter: String(formData.get('personalLetter') ?? '').trim() || null,
+    guarantor_available: formData.get('guarantorAvailable') === 'on',
     desired_move_in: String(formData.get('desiredMoveIn') ?? '').trim() || null,
     desired_locations: desiredLocations,
   })
@@ -156,24 +166,130 @@ export async function removeCoApplicantAction(formData: FormData) {
   revalidatePath('/dashboard/profile')
 }
 
+export async function inviteCoApplicantAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const id = String(formData.get('id') ?? '')
+  if (!id) return
+
+  const { data: coApplicant } = await supabase
+    .from('co_applicants')
+    .select('id, invite_status')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!coApplicant || coApplicant.invite_status === 'accepted') return
+
+  await supabase
+    .from('co_applicants')
+    .update({
+      invite_status: 'invited',
+      invite_token: randomUUID(),
+      invited_at: new Date().toISOString(),
+      invited_user_id: null,
+      accepted_at: null,
+      consented_at: null,
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  revalidatePath('/dashboard/profile')
+}
+
+export async function addGuarantorAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+
+  const fullName = String(formData.get('fullName') ?? '').trim()
+  if (!fullName) return
+
+  await supabase.from('guarantors').insert({
+    user_id: user.id,
+    full_name: fullName,
+    email: String(formData.get('email') ?? '').trim() || null,
+    phone: String(formData.get('phone') ?? '').trim() || null,
+    relationship: String(formData.get('relationship') ?? '').trim() || null,
+    monthly_income: Number(formData.get('monthlyIncome') ?? 0) || null,
+  })
+
+  await supabase.from('profiles').update({ guarantor_available: true }).eq('id', user.id)
+
+  revalidatePath('/dashboard/profile')
+}
+
+export async function removeGuarantorAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const id = String(formData.get('id') ?? '')
+  if (!id) return
+
+  await supabase.from('guarantors').delete().eq('id', id).eq('user_id', user.id)
+  revalidatePath('/dashboard/profile')
+}
+
 export async function addProfileDocumentAction(formData: FormData) {
   const { supabase, user } = await requireUser()
 
-  const fileName = String(formData.get('fileName') ?? '').trim()
-  const fileUrl = String(formData.get('fileUrl') ?? '').trim()
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'profile_document_upload',
+    subject: user.id,
+    limit: 20,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return
+
+  const uploadedFile = formData.get('file')
+  const rawFileName = String(formData.get('fileName') ?? '').trim()
+  let fileName = rawFileName
+  let fileUrl = String(formData.get('fileUrl') ?? '').trim()
+
+  if (uploadedFile instanceof File && uploadedFile.size > 0) {
+    const validationError = validateProfileDocument(uploadedFile)
+    if (validationError) {
+      console.error('Invalid profile document upload', validationError)
+      return
+    }
+
+    fileName = rawFileName || uploadedFile.name
+    const safeFileName = sanitizeStorageFileName(uploadedFile.name)
+    const storagePath = `${user.id}/${randomUUID()}-${safeFileName}`
+    const { error } = await supabase.storage.from(PROFILE_DOCUMENTS_BUCKET).upload(storagePath, uploadedFile, {
+      contentType: uploadedFile.type || 'application/octet-stream',
+      upsert: false,
+    })
+
+    if (error) {
+      console.error('Failed to upload profile document', error)
+      return
+    }
+
+    fileUrl = toStorageUri(PROFILE_DOCUMENTS_BUCKET, storagePath)
+  }
+
   if (!fileName || !fileUrl) return
+
+  const replacesDocumentId = String(formData.get('replacesDocumentId') ?? '').trim()
 
   await supabase.from('profile_documents').insert({
     user_id: user.id,
     file_name: fileName,
     file_url: fileUrl,
     document_type: String(formData.get('documentType') ?? 'general').trim() || 'general',
-    document_status: 'active',
+    // New documents await review; they remain usable in applications meanwhile.
+    document_status: 'pending_review',
     document_expires_at: String(formData.get('documentExpiresAt') ?? '').trim() || null,
     is_default_for_applications: formData.get('isDefaultForApplications') === 'on',
   })
 
+  // Resubmission: mark the replaced document accordingly.
+  if (replacesDocumentId) {
+    await supabase
+      .from('profile_documents')
+      .update({ document_status: 'replaced' })
+      .eq('id', replacesDocumentId)
+      .eq('user_id', user.id)
+  }
+
   revalidatePath('/dashboard/profile')
+  revalidatePath('/dashboard/documents')
 }
 
 export async function removeProfileDocumentAction(formData: FormData) {
@@ -181,12 +297,39 @@ export async function removeProfileDocumentAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   if (!id) return
 
+  const { data: document } = await supabase
+    .from('profile_documents')
+    .select('id, file_url')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle<{ id: string; file_url: string }>()
+
+  if (!document) return
+
+  const storageRef = parseStorageUri(document.file_url)
   await supabase.from('profile_documents').delete().eq('id', id).eq('user_id', user.id)
+  if (storageRef) {
+    await supabase.storage.from(storageRef.bucket).remove([storageRef.path])
+  }
+
   revalidatePath('/dashboard/profile')
 }
 
 export async function startQueueMembershipAction() {
   const { supabase, user } = await requireUser()
+
+  // Queue membership requires a verified identity (free after verification).
+  const { data: verifiedIdentity } = await supabase
+    .from('identity_verifications')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('status', 'verified')
+    .limit(1)
+    .maybeSingle()
+
+  if (!verifiedIdentity) {
+    redirect('/dashboard/identity?reason=queue')
+  }
 
   const now = new Date().toISOString()
   const nextBillingAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -228,6 +371,8 @@ export async function startQueueMembershipAction() {
       note: 'Kömedlemskap startat.',
     })
   }
+
+  await trackEvent('queue_joined')
 
   revalidatePath('/dashboard/profile')
 }
@@ -311,5 +456,25 @@ export async function updatePasswordAction(formData: FormData) {
   if (password !== confirmPassword) throw new Error('Lösenorden matchar inte.')
 
   await supabase.auth.updateUser({ password })
+  revalidatePath('/dashboard/settings')
+}
+
+export async function createPrivacyRequestAction(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const requestType = String(formData.get('requestType') ?? 'export')
+  const allowedTypes = ['export', 'rectification', 'erasure', 'restriction']
+  if (!allowedTypes.includes(requestType)) return
+
+  const { error } = await supabase.from('privacy_requests').insert({
+    user_id: user.id,
+    request_type: requestType,
+    message: String(formData.get('message') ?? '').trim() || null,
+  })
+
+  if (error) {
+    console.error('Failed to create privacy request', error)
+    return
+  }
+
   revalidatePath('/dashboard/settings')
 }

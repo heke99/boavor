@@ -1,10 +1,13 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { parseStorageUri } from '@/lib/storage'
 import type {
   AppRole,
+  CoApplicantItem,
   CompanyMembershipItem,
   CompanyType,
   DashboardProfileItem,
   LegalForm,
+  ProfileDocumentItem,
   QueueMembershipItem,
   SubscriptionStatus,
 } from '@/lib/types'
@@ -16,7 +19,7 @@ type ProfileRow = {
   phone: string | null
   role: AppRole
   account_type?: DashboardProfileItem['accountType'] | null
-  personal_identity_number?: string | null
+  identity_verified_at?: string | null
   preferred_listing_intent?: DashboardProfileItem['preferredListingIntent'] | null
   terms_accepted_at?: string | null
   privacy_accepted_at?: string | null
@@ -25,9 +28,15 @@ type ProfileRow = {
   city: string | null
   household_size: number | null
   has_pets: boolean
+  smoking?: boolean | null
   employment_status: string | null
   employer_name: string | null
   monthly_income: number | null
+  income_type?: string | null
+  study_status?: string | null
+  current_housing_situation?: string | null
+  personal_letter?: string | null
+  guarantor_available?: boolean | null
   desired_move_in: string | null
   desired_locations: string[] | null
 }
@@ -39,6 +48,19 @@ type CoApplicantRow = {
   phone: string | null
   relationship: string | null
   created_at: string
+  invite_status?: string | null
+  invite_token?: string | null
+  consented_at?: string | null
+}
+
+type GuarantorRow = {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  relationship: string | null
+  monthly_income: number | null
+  created_at: string
 }
 
 type ProfileDocumentRow = {
@@ -46,9 +68,10 @@ type ProfileDocumentRow = {
   file_name: string
   file_url: string
   document_type: string
-  document_status?: 'active' | 'expired' | 'replaced' | null
+  document_status?: string | null
   document_expires_at?: string | null
   is_default_for_applications?: boolean | null
+  rejection_reason?: string | null
   created_at: string
 }
 
@@ -68,29 +91,14 @@ type SubscriptionRow = {
 
 type CompanyMembershipRow = {
   role: AppRole
-  companies:
-    | {
-        id: string
-        name: string
-        slug: string
-        company_type: CompanyType | null
-        legal_form: LegalForm | null
-      }[]
-    | null
-}
-
-function addMonths(dateString: string, months: number) {
-  const date = new Date(dateString)
-  date.setMonth(date.getMonth() + months)
-  return date
-}
-
-function fullMonthsBetween(start: string, end: Date) {
-  const startDate = new Date(start)
-  let months = (end.getFullYear() - startDate.getFullYear()) * 12 + (end.getMonth() - startDate.getMonth())
-  const candidate = addMonths(start, months)
-  if (candidate > end) months -= 1
-  return Math.max(0, months)
+  // company_members -> companies is many-to-one, so PostgREST embeds a single object.
+  companies: {
+    id: string
+    name: string
+    slug: string
+    company_type: CompanyType | null
+    legal_form: LegalForm | null
+  } | null
 }
 
 async function ensureProfileExists(userId: string) {
@@ -103,55 +111,9 @@ async function ensureProfileExists(userId: string) {
   }
 }
 
-async function syncQueueMembership(userId: string) {
-  const supabase = await createSupabaseServerClient()
-  if (!supabase) return
-
-  const { data: membership } = await supabase
-    .from('queue_memberships')
-    .select('id, membership_status, joined_queue_at, current_points, months_in_queue, last_point_awarded_at, next_billing_at')
-    .eq('user_id', userId)
-    .maybeSingle<QueueMembershipRow>()
-
-  if (!membership || membership.membership_status !== 'active') return
-
-  const { data: subscription } = await supabase
-    .from('user_subscriptions')
-    .select('status')
-    .eq('user_id', userId)
-    .eq('plan_code', 'queue_monthly')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<SubscriptionRow>()
-
-  if (!subscription || subscription.status !== 'active') return
-
-  const now = new Date()
-  const monthsEarned = fullMonthsBetween(membership.joined_queue_at, now)
-  if (monthsEarned <= membership.current_points) return
-
-  const delta = monthsEarned - membership.current_points
-  const nextBillingAt = addMonths(membership.joined_queue_at, monthsEarned + 1).toISOString()
-
-  await supabase
-    .from('queue_memberships')
-    .update({
-      current_points: monthsEarned,
-      months_in_queue: monthsEarned,
-      last_point_awarded_at: now.toISOString(),
-      next_billing_at: nextBillingAt,
-    })
-    .eq('id', membership.id)
-
-  await supabase.from('queue_point_ledger').insert({
-    user_id: userId,
-    membership_id: membership.id,
-    event_type: 'monthly_accrual',
-    points_delta: delta,
-    balance_after: monthsEarned,
-    note: `${delta} månad(er) köpoäng uppdaterade automatiskt.`,
-  })
-}
+// Queue points are awarded by the scheduled job /api/cron/award-queue-points
+// (1 point per day, ledger-driven, idempotent). The previous ad-hoc month sync
+// on page render has been removed.
 
 export async function getDashboardProfile() {
   const supabase = await createSupabaseServerClient()
@@ -166,25 +128,30 @@ export async function getDashboardProfile() {
   }
 
   await ensureProfileExists(user.id)
-  await syncQueueMembership(user.id)
 
   const { data: profileRow } = await supabase
     .from('profiles')
     .select(
-      'id, first_name, last_name, phone, role, account_type, personal_identity_number, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, employment_status, employer_name, monthly_income, desired_move_in, desired_locations',
+      'id, first_name, last_name, phone, role, account_type, identity_verified_at, preferred_listing_intent, terms_accepted_at, privacy_accepted_at, personal_identity_consent_at, marketing_consent, city, household_size, has_pets, smoking, employment_status, employer_name, monthly_income, income_type, study_status, current_housing_situation, personal_letter, guarantor_available, desired_move_in, desired_locations',
     )
     .eq('id', user.id)
     .maybeSingle<ProfileRow>()
 
   const { data: coApplicants } = await supabase
     .from('co_applicants')
-    .select('id, full_name, email, phone, relationship, created_at')
+    .select('id, full_name, email, phone, relationship, created_at, invite_status, invite_token, consented_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  const { data: guarantors } = await supabase
+    .from('guarantors')
+    .select('id, full_name, email, phone, relationship, monthly_income, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   const { data: documents } = await supabase
     .from('profile_documents')
-    .select('id, file_name, file_url, document_type, document_status, document_expires_at, is_default_for_applications, created_at')
+    .select('id, file_name, file_url, document_type, document_status, document_expires_at, is_default_for_applications, rejection_reason, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -216,7 +183,7 @@ export async function getDashboardProfile() {
     phone: profileRow?.phone ?? '',
     role: profileRow?.role ?? 'seeker',
     accountType: profileRow?.account_type ?? 'private',
-    personalIdentityNumber: profileRow?.personal_identity_number ?? null,
+    identityVerifiedAt: profileRow?.identity_verified_at ?? null,
     preferredListingIntent: profileRow?.preferred_listing_intent ?? 'both',
     termsAcceptedAt: profileRow?.terms_accepted_at ?? null,
     privacyAcceptedAt: profileRow?.privacy_accepted_at ?? null,
@@ -225,9 +192,15 @@ export async function getDashboardProfile() {
     city: profileRow?.city ?? '',
     householdSize: profileRow?.household_size ?? null,
     hasPets: profileRow?.has_pets ?? false,
+    smoking: profileRow?.smoking ?? false,
     employmentStatus: profileRow?.employment_status ?? 'employed',
     employerName: profileRow?.employer_name ?? '',
     monthlyIncome: profileRow?.monthly_income ?? null,
+    incomeType: profileRow?.income_type ?? null,
+    studyStatus: profileRow?.study_status ?? null,
+    currentHousingSituation: profileRow?.current_housing_situation ?? null,
+    personalLetter: profileRow?.personal_letter ?? null,
+    guarantorAvailable: profileRow?.guarantor_available ?? false,
     desiredMoveIn: profileRow?.desired_move_in ?? null,
     desiredLocations: profileRow?.desired_locations ?? [],
     coApplicants: ((coApplicants ?? []) as CoApplicantRow[]).map((item) => ({
@@ -237,15 +210,28 @@ export async function getDashboardProfile() {
       phone: item.phone,
       relationship: item.relationship,
       createdAt: item.created_at,
+      inviteStatus: (item.invite_status ?? 'none') as CoApplicantItem['inviteStatus'],
+      inviteToken: item.invite_token ?? null,
+      consentedAt: item.consented_at ?? null,
+    })),
+    guarantors: ((guarantors ?? []) as GuarantorRow[]).map((item) => ({
+      id: item.id,
+      fullName: item.full_name,
+      email: item.email,
+      phone: item.phone,
+      relationship: item.relationship,
+      monthlyIncome: item.monthly_income,
+      createdAt: item.created_at,
     })),
     documents: ((documents ?? []) as ProfileDocumentRow[]).map((item) => ({
       id: item.id,
       fileName: item.file_name,
-      fileUrl: item.file_url,
+      fileUrl: parseStorageUri(item.file_url) ? `/dashboard/documents/${item.id}/view` : item.file_url,
       documentType: item.document_type,
-      documentStatus: item.document_status ?? 'active',
+      documentStatus: (item.document_status ?? 'active') as ProfileDocumentItem['documentStatus'],
       documentExpiresAt: item.document_expires_at ?? null,
       isDefaultForApplications: item.is_default_for_applications ?? false,
+      rejectionReason: item.rejection_reason ?? null,
       createdAt: item.created_at,
     })),
     queueMembership: membership
@@ -259,9 +245,9 @@ export async function getDashboardProfile() {
           subscriptionStatus: subscription?.status ?? null,
         }
       : null,
-    companies: ((companyMemberships ?? []) as CompanyMembershipRow[])
+    companies: ((companyMemberships ?? []) as unknown as CompanyMembershipRow[])
       .map((item) => {
-        const company = item.companies?.[0] ?? null
+        const company = item.companies
         if (!company) return null
 
         return {
