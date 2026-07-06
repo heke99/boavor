@@ -20,6 +20,16 @@ import {
   updateListingStatusAction,
 } from '@/app/dashboard/listings/actions'
 import { startApplicationThreadAction } from '@/app/dashboard/messages/actions'
+import {
+  createContractDraftAction,
+  mockSignContractAction,
+  sendContractForSigningAction,
+  sendOfferAction,
+  withdrawOfferAction,
+} from '@/app/landlord/contracts/actions'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { resolveEsignProvider } from '@/lib/esign/provider'
+import { normalizeStatus } from '@/lib/applications/status-machine'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +72,33 @@ export default async function DashboardListingDetailPage({ params }: { params: P
     : false
   const needsRandomOrder =
     selectionMethod === 'random' && rankedApplications.some((item) => item.application.randomRank === null)
+
+  // Offers, contracts and templates for the contract flow.
+  const supabase = await createSupabaseServerClient()
+  const applicationIds = listing.applications.map((application) => application.id)
+  const [{ data: offers }, { data: contracts }, { data: templates }] =
+    supabase && applicationIds.length
+      ? await Promise.all([
+          supabase
+            .from('rental_offers')
+            .select('id, application_id, status, message, expires_at')
+            .in('application_id', applicationIds)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('contracts')
+            .select('id, application_id, status, provider, contract_signers(id, user_id, full_name, status, signer_role)')
+            .in('application_id', applicationIds)
+            .neq('status', 'cancelled'),
+          supabase.from('contract_templates').select('id, name, version').eq('is_active', true),
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }]
+
+  const latestOfferByApplication = new Map<string, NonNullable<typeof offers>[number]>()
+  for (const offer of offers ?? []) {
+    if (!latestOfferByApplication.has(offer.application_id)) latestOfferByApplication.set(offer.application_id, offer)
+  }
+  const contractByApplication = new Map((contracts ?? []).map((contract) => [contract.application_id, contract]))
+  const esignResolution = resolveEsignProvider()
 
   return (
     <DashboardShell
@@ -282,6 +319,90 @@ export default async function DashboardListingDetailPage({ params }: { params: P
                             Skicka meddelande
                           </Button>
                         </form>
+
+                        {allowedStatuses.includes('offered') ? (
+                          <details className="rounded-2xl border border-[#bbf7d0] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#166534]">Skicka erbjudande</summary>
+                            <form action={sendOfferAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="applicationId" value={application.id} />
+                              <Input name="message" placeholder="Meddelande till sökanden" className="h-10 rounded-2xl text-xs" />
+                              <Input name="expiresAt" type="datetime-local" className="h-10 rounded-2xl text-xs" />
+                              <Button type="submit" variant="secondary" className="h-9 text-xs">Skicka erbjudande</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {normalizeStatus(application.status) === 'offered' && latestOfferByApplication.get(application.id)?.status === 'sent' ? (
+                          <details className="rounded-2xl border border-[#fecaca] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#b91c1c]">Dra tillbaka erbjudande</summary>
+                            <form action={withdrawOfferAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="offerId" value={latestOfferByApplication.get(application.id)!.id} />
+                              <Input name="reason" placeholder="Skäl (krävs)" required className="h-10 rounded-2xl text-xs" />
+                              <Button type="submit" variant="ghost" className="h-9 border border-[#fecaca] text-xs !text-[#b91c1c]">Dra tillbaka</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {normalizeStatus(application.status) === 'offer_accepted' && !contractByApplication.has(application.id) ? (
+                          <details className="rounded-2xl border border-[#c7d2fe] p-3">
+                            <summary className="cursor-pointer text-xs font-semibold text-[#3730a3]">Skapa kontrakt</summary>
+                            <form action={createContractDraftAction} className="mt-2 flex flex-col gap-2">
+                              <input type="hidden" name="applicationId" value={application.id} />
+                              <Select name="templateId" className="h-10 text-xs">
+                                {(templates ?? []).map((template) => (
+                                  <option key={template.id} value={template.id}>{template.name} (v{template.version})</option>
+                                ))}
+                              </Select>
+                              <Button type="submit" variant="secondary" className="h-9 text-xs">Skapa kontraktsutkast</Button>
+                            </form>
+                          </details>
+                        ) : null}
+
+                        {contractByApplication.has(application.id) ? (
+                          <div className="rounded-2xl border border-[#c7d2fe] bg-[#eef2ff] p-3 text-xs">
+                            {(() => {
+                              const contract = contractByApplication.get(application.id)!
+                              const mySignerPending = contract.contract_signers?.some(
+                                (signer) => signer.status === 'pending' && signer.signer_role === 'landlord',
+                              )
+                              return (
+                                <div className="space-y-2">
+                                  <div className="font-semibold text-[#3730a3]">
+                                    Kontrakt: {contract.status === 'internal_review' ? 'Intern granskning' : contract.status === 'sent_for_signing' ? 'Väntar på signaturer' : contract.status === 'signed' ? 'Signerat' : contract.status}
+                                    {contract.provider === 'mock' ? ' · testsignering' : ''}
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {(contract.contract_signers ?? []).map((signer) => (
+                                      <li key={signer.id}>
+                                        {signer.full_name} ({signer.signer_role}) — {signer.status === 'signed' ? '✓ signerad' : 'väntar'}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {contract.status === 'internal_review' ? (
+                                    esignResolution.kind === 'provider' ? (
+                                      <form action={sendContractForSigningAction}>
+                                        <input type="hidden" name="contractId" value={contract.id} />
+                                        <Button type="submit" variant="secondary" className="h-9 text-xs">
+                                          Skicka för signering{esignResolution.provider.isMock ? ' (test)' : ''}
+                                        </Button>
+                                      </form>
+                                    ) : (
+                                      <p className="font-semibold text-[#92400e]">
+                                        E-signering är inte konfigurerad i den här miljön.
+                                      </p>
+                                    )
+                                  ) : null}
+                                  {contract.status === 'sent_for_signing' && contract.provider === 'mock' && mySignerPending ? (
+                                    <form action={mockSignContractAction}>
+                                      <input type="hidden" name="contractId" value={contract.id} />
+                                      <Button type="submit" variant="secondary" className="h-9 text-xs">Signera som hyresvärd (test)</Button>
+                                    </form>
+                                  ) : null}
+                                </div>
+                              )
+                            })()}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

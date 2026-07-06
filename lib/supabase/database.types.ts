@@ -428,6 +428,205 @@ export type Database = {
           },
         ]
       }
+      contract_events: {
+        Row: {
+          actor_user_id: string | null
+          contract_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          actor_user_id?: string | null
+          contract_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+        }
+        Update: {
+          actor_user_id?: string | null
+          contract_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_signers: {
+        Row: {
+          contract_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          provider_ref: string | null
+          signed_at: string | null
+          signer_role: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          provider_ref?: string | null
+          signed_at?: string | null
+          signer_role: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          provider_ref?: string | null
+          signed_at?: string | null
+          signer_role?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_signers_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          body_template: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          locked_at: string | null
+          name: string
+          version: number
+        }
+        Insert: {
+          body_template: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          locked_at?: string | null
+          name: string
+          version?: number
+        }
+        Update: {
+          body_template?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          locked_at?: string | null
+          name?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          application_id: string
+          body_snapshot: string
+          created_at: string
+          created_by: string | null
+          id: string
+          listing_id: string | null
+          provider: string | null
+          provider_ref: string | null
+          signed_at: string | null
+          signed_pdf_url: string | null
+          status: string
+          template_id: string | null
+          template_version: number | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          body_snapshot: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          listing_id?: string | null
+          provider?: string | null
+          provider_ref?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string | null
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          body_snapshot?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          listing_id?: string | null
+          provider?: string | null
+          provider_ref?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string | null
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_access_logs: {
         Row: {
           access_type: string
@@ -2280,6 +2479,98 @@ export type Database = {
           },
         ]
       }
+      rental_offer_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          offer_id: string
+          payload: Json
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          offer_id: string
+          payload?: Json
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          offer_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_offer_events_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "rental_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rental_offers: {
+        Row: {
+          application_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          listing_id: string | null
+          message: string | null
+          responded_at: string | null
+          status: string
+          user_id: string
+          withdrawn_reason: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_id?: string | null
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          user_id: string
+          withdrawn_reason?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          listing_id?: string | null
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          user_id?: string
+          withdrawn_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rental_offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rental_requirements: {
         Row: {
           created_at: string
@@ -2787,6 +3078,92 @@ export type Database = {
           },
         ]
       }
+      viewing_invitations: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          responded_at: string | null
+          slot_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          slot_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          slot_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viewing_invitations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viewing_invitations_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "viewing_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viewing_slots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          listing_id: string
+          location_note: string | null
+          max_attendees: number | null
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          listing_id: string
+          location_note?: string | null
+          max_attendees?: number | null
+          starts_at: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          listing_id?: string
+          location_note?: string | null
+          max_attendees?: number | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viewing_slots_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       viewings: {
         Row: {
           created_at: string
@@ -2980,6 +3357,10 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_signed_contract: {
+        Args: { p_contract_id: string }
+        Returns: Json
+      }
       get_co_applicant_invite: {
         Args: { p_token: string }
         Returns: {
@@ -3005,6 +3386,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      mock_sign_contract: { Args: { p_contract_id: string }; Returns: Json }
       notify_application_applicant: {
         Args: { p_application_id: string; p_body: string; p_title: string }
         Returns: undefined

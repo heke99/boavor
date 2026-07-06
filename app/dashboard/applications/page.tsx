@@ -6,7 +6,13 @@ import { getUserApplications, requireSignedInUser } from '@/lib/data/rental-appl
 import { getApplicationLimitCheck } from '@/lib/data/queue'
 import { isActiveApplicationStatus } from '@/lib/queue/limits'
 import { normalizeStatus, statusLabel } from '@/lib/applications/status-machine'
-import { acceptOfferAction, confirmViewingAction, declineOfferAction, withdrawApplicationAction } from './actions'
+import {
+  acceptOfferAction,
+  applicantMockSignAction,
+  confirmViewingAction,
+  declineOfferAction,
+  withdrawApplicationAction,
+} from './actions'
 import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +26,33 @@ function competitionLabel(count: number) {
 export default async function DashboardApplicationsPage() {
   const [applications, { supabase, user }] = await Promise.all([getUserApplications(), requireSignedInUser()])
   const limitCheck = await getApplicationLimitCheck(supabase, user.id)
+
+  // Open offers and contracts awaiting the user's signature.
+  const applicationIds = applications.map((application) => application.id)
+  const [{ data: offers }, { data: pendingContracts }] = applicationIds.length
+    ? await Promise.all([
+        supabase
+          .from('rental_offers')
+          .select('application_id, message, expires_at, status')
+          .in('application_id', applicationIds)
+          .eq('user_id', user.id)
+          .eq('status', 'sent'),
+        supabase
+          .from('contracts')
+          .select('id, application_id, status, provider, contract_signers(user_id, status)')
+          .in('application_id', applicationIds)
+          .eq('status', 'sent_for_signing'),
+      ])
+    : [{ data: [] }, { data: [] }]
+
+  const offerMap = new Map((offers ?? []).map((offer) => [offer.application_id, offer]))
+  const contractMap = new Map(
+    (pendingContracts ?? [])
+      .filter((contract) =>
+        (contract.contract_signers ?? []).some((signer) => signer.user_id === user.id && signer.status === 'pending'),
+      )
+      .map((contract) => [contract.application_id, contract]),
+  )
   const totalApplicants = applications.reduce((sum, item) => sum + (item.applicantsCountForListing ?? 1), 0)
   const averageCompetition = applications.length ? Math.round(totalApplicants / applications.length) : 0
 
@@ -110,6 +143,14 @@ export default async function DashboardApplicationsPage() {
                     <div className="text-sm font-semibold text-[#166534]">
                       Du har fått ett erbjudande om bostaden. Svara så snart du kan.
                     </div>
+                    {offerMap.get(application.id)?.message ? (
+                      <p className="mt-2 text-sm leading-6 text-[#166534]">{offerMap.get(application.id)?.message}</p>
+                    ) : null}
+                    {offerMap.get(application.id)?.expires_at ? (
+                      <p className="mt-1 text-xs font-semibold text-[#92400e]">
+                        Svara senast {new Date(offerMap.get(application.id)!.expires_at as string).toLocaleString('sv-SE')}
+                      </p>
+                    ) : null}
                     <div className="mt-3 flex flex-wrap gap-3">
                       <form action={acceptOfferAction}>
                         <input type="hidden" name="applicationId" value={application.id} />
@@ -120,6 +161,21 @@ export default async function DashboardApplicationsPage() {
                         <Button type="submit" variant="ghost" className="h-10 border border-black/10">Tacka nej</Button>
                       </form>
                     </div>
+                  </div>
+                ) : null}
+
+                {contractMap.has(application.id) ? (
+                  <div className="mt-6 rounded-2xl border border-[#c7d2fe] bg-[#eef2ff] p-4">
+                    <div className="text-sm font-semibold text-[#3730a3]">
+                      Kontraktet väntar på din signatur
+                      {contractMap.get(application.id)?.provider === 'mock' ? ' (testsignering — gäller ej som riktig e-signatur)' : ''}
+                    </div>
+                    <form action={applicantMockSignAction} className="mt-3">
+                      <input type="hidden" name="contractId" value={contractMap.get(application.id)!.id} />
+                      <Button type="submit" className="h-10">
+                        {contractMap.get(application.id)?.provider === 'mock' ? 'Signera (test)' : 'Öppna signering'}
+                      </Button>
+                    </form>
                   </div>
                 ) : null}
 
