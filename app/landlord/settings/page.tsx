@@ -176,15 +176,27 @@ export default async function LandlordSettingsPage() {
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold text-[#111827]">API och webhooks</h2>
-        <p className="mt-1 text-sm text-[#6b7280]">
-          Integrera Bovaro med era egna system: API-nycklar med behörigheter och signerade webhooks vid nya ansökningar.
-        </p>
-        <Button href="/landlord/settings/api" variant="ghost" className="mt-4 border border-[#d7dbe7] !text-[#111827]">
-          Hantera API-nycklar och webhooks
-        </Button>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-[#111827]">API och webhooks</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">
+            Integrera Bovaro med era egna system: API-nycklar med behörigheter och signerade webhooks vid nya ansökningar.
+          </p>
+          <Button href="/landlord/settings/api" variant="ghost" className="mt-4 border border-[#d7dbe7] !text-[#111827]">
+            Hantera API-nycklar och webhooks
+          </Button>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-[#111827]">Hyresgästportal (white label)</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">
+            En publik portal med er logotyp, färg och era publicerade objekt — på /p/ert-namn eller egen domän.
+          </p>
+          <Button href="/landlord/settings/portal" variant="ghost" className="mt-4 border border-[#d7dbe7] !text-[#111827]">
+            Hantera portalen
+          </Button>
+        </Card>
+      </div>
     </LandlordShell>
   )
 }

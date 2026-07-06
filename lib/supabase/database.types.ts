@@ -3916,6 +3916,71 @@ export type Database = {
           },
         ]
       }
+      tenant_portals: {
+        Row: {
+          cities: string[]
+          company_id: string
+          contact_email: string | null
+          created_at: string
+          created_by: string | null
+          custom_domain: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          primary_color: string
+          show_queue_info: boolean
+          slug: string
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          cities?: string[]
+          company_id: string
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          primary_color?: string
+          show_queue_info?: boolean
+          slug: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cities?: string[]
+          company_id?: string
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          primary_color?: string
+          show_queue_info?: boolean
+          slug?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_portals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_documents: {
         Row: {
           created_at: string

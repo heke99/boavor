@@ -444,6 +444,30 @@ export async function getPublishedListings(filters: SearchFilters = {}, options?
   return (data ?? []).map((row) => mapListingCard(row as ListingRow))
 }
 
+/** Published listings for one company (tenant portals); optional city scope. */
+export async function getPublishedCompanyListings(companyId: string, cities: string[] = [], limit = 60) {
+  const supabase = await createSupabaseServerClient()
+  if (!supabase) return [] as ListingCardItem[]
+
+  let builder = queryBaseListings(supabase)
+    .eq('status', 'published')
+    .eq('company_id', companyId)
+    .order('published_at', { ascending: false })
+    .limit(limit)
+
+  if (cities.length > 0) {
+    builder = builder.in('city', cities)
+  }
+
+  const { data, error } = await builder
+  if (error) {
+    console.error('Failed to fetch portal listings', error)
+    return []
+  }
+
+  return (data ?? []).map((row) => mapListingCard(row as ListingRow))
+}
+
 export async function getListingBySlug(slug: string) {
   const supabase = await createSupabaseServerClient()
   if (!supabase) return null
