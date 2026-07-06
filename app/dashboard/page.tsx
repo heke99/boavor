@@ -3,6 +3,7 @@ import { AlertCircle, ArrowRight, Building2, FileText, Inbox, UserCheck } from '
 import { Card } from '@/components/ui/Card'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 import { Button } from '@/components/ui/Button'
+import { CampaignBanner } from '@/components/marketing/CampaignBanner'
 import { getReadinessForCurrentUser } from '@/lib/data/readiness'
 import { getOwnerDashboardData, getUserApplications } from '@/lib/data/rental-applications'
 
@@ -32,6 +33,8 @@ export default async function DashboardPage() {
       title={isCompany ? 'Företagsöversikt' : 'Min översikt'}
       description="Här får du en rollstyrd överblick över ansökningar, profil, dokument, objekt och inkommande leads."
     >
+      <CampaignBanner placement="dashboard" />
+
       <div className="grid gap-5 md:grid-cols-4">
         <Card className="p-6">
           <div className="flex items-center justify-between gap-3">

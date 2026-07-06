@@ -1,6 +1,7 @@
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { ListingFilters } from '@/components/listings/ListingFilters'
 import { getPublishedListings } from '@/lib/data/listings'
+import { trackEvent } from '@/lib/analytics/track'
 import type {
   CommercialType,
   InvestmentType,
@@ -89,6 +90,22 @@ export default async function ListingsPage({ searchParams }: Props) {
 
   const activeFiltersCount = Object.values(filters).filter(Boolean).length
   const listings = await getPublishedListings(filters)
+
+  // Only searches with at least one active filter are tracked; plain page
+  // loads would drown out real search behaviour. Metadata is filter values
+  // only — never anything typed by the user beyond city.
+  if (activeFiltersCount > 0) {
+    await trackEvent('search_performed', {
+      metadata: {
+        mode: filters.mode ?? null,
+        category: filters.category ?? null,
+        city: filters.city ?? null,
+        sort: filters.sort ?? null,
+        active_filters: activeFiltersCount,
+        results: listings.length,
+      },
+    })
+  }
 
   return (
     <section className="container-shell py-12">

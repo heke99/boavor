@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { trackEvent } from '@/lib/analytics/track'
 import type { PropertyType, SavedSearchMode } from '@/lib/types'
 
 async function requireUser() {
@@ -54,6 +55,8 @@ export async function saveSearchAction(formData: FormData) {
     max_price: Number(formData.get('maxPrice') ?? 0) || null,
     notifications_enabled: formData.get('notificationsEnabled') === 'on',
   })
+
+  await trackEvent('saved_search_created')
 
   revalidatePath('/dashboard/saved-searches')
 }

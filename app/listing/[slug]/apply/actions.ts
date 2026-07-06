@@ -10,6 +10,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/data/queue'
 import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
 import { runMatchkoll } from '@/lib/data/matchkoll'
+import { trackEvent } from '@/lib/analytics/track'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -232,6 +233,11 @@ export async function submitRentalApplication(formData: FormData) {
     user_id: user.id,
     title: 'Ansökan skickad',
     body: `Din ansökan för ${listing.title} har skickats och sparats i Bovaro.`,
+  })
+
+  await trackEvent('application_submitted', {
+    listingId: owner.id,
+    metadata: { city: listing.city, listing_type: listing.listingType },
   })
 
   revalidatePath('/dashboard/applications')

@@ -7,6 +7,7 @@ import { getListingBySlug } from '@/lib/data/listings'
 import { runMatchkoll } from '@/lib/data/matchkoll'
 import { requireVerifiedAdult } from '@/lib/data/identity'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { trackEvent } from '@/lib/analytics/track'
 import type { InquiryType } from '@/lib/types'
 
 export async function runMatchkollAction(formData: FormData) {
@@ -140,6 +141,11 @@ export async function submitListingInquiry(formData: FormData) {
     console.error('Failed to create listing inquiry', error)
     redirect(`/listing/${slug}?inquiry=failed`)
   }
+
+  await trackEvent('inquiry_submitted', {
+    listingId: owner?.id ?? listing.id,
+    metadata: { inquiry_type: inquiryType, listing_segment: listing.listingSegment },
+  })
 
   revalidatePath(`/listing/${slug}`)
   redirect(`/listing/${slug}?inquiry=sent`)

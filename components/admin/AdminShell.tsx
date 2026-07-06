@@ -2,6 +2,7 @@ import Link from 'next/link'
 import {
   Activity,
   ArrowLeftRight,
+  BarChart3,
   Building2,
   ClipboardList,
   Clock3,
@@ -9,6 +10,7 @@ import {
   Fingerprint,
   Inbox,
   LayoutDashboard,
+  Megaphone,
   ShieldCheck,
   Users,
   Wallet,
@@ -29,6 +31,8 @@ const navItems = [
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
   { href: '/admin/byta', label: 'Byten', icon: ArrowLeftRight },
   { href: '/admin/billing', label: 'Fakturering', icon: Wallet },
+  { href: '/admin/analytics', label: 'Analys', icon: BarChart3 },
+  { href: '/admin/campaigns', label: 'Kampanjer', icon: Megaphone },
   { href: '/admin/system', label: 'System', icon: Activity },
 ]
 

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { getAuthContext } from '@/lib/auth/permissions'
 import { requireVerifiedAdult } from '@/lib/data/identity'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { trackEvent } from '@/lib/analytics/track'
 
 export async function saveExchangeProfileAction(formData: FormData) {
   const { supabase, user } = await getAuthContext({ loginRedirect: '/login?next=/byta/skapa' })
@@ -109,6 +110,11 @@ export async function registerExchangeInterestAction(formData: FormData) {
   }
 
   const result = data as { mutual?: boolean } | null
+
+  if (interested) {
+    await trackEvent('exchange_interest', { metadata: { mutual: result?.mutual ?? false } })
+  }
+
   revalidatePath('/dashboard/byten')
   redirect(result?.mutual ? `/dashboard/byten?byta=match` : `${safeBackTo}?byta=registered`)
 }

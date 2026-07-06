@@ -1,4 +1,5 @@
 import { ListingGrid } from '@/components/listings/ListingGrid'
+import { CampaignBanner } from '@/components/marketing/CampaignBanner'
 import { getPublishedListings } from '@/lib/data/listings'
 
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,9 @@ export default async function RentPage() {
         <p className="mt-4 max-w-3xl text-base leading-8 text-[var(--muted)] md:text-lg">
           Upptäck hyresobjekt med tydliga krav, smarta filter och snabb väg till ansökan eller intresseanmälan.
         </p>
+      </div>
+      <div className="mt-8">
+        <CampaignBanner placement="rent" />
       </div>
       <div className="mt-8">
         <ListingGrid listings={listings} />

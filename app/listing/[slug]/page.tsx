@@ -21,6 +21,7 @@ import { getListingPrimaryMeta, isRentalApplicationListing, listingTypeLabels } 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getLatestPrecheck, hasPlusEntitlement, type StoredEvaluation } from '@/lib/data/matchkoll'
 import { requireVerifiedAdult } from '@/lib/data/identity'
+import { trackEvent } from '@/lib/analytics/track'
 import { submitListingInquiry } from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -66,6 +67,7 @@ export default async function ListingDetailPage({ params, searchParams }: Props)
   const [related, publicStats] = await Promise.all([
     getRelatedListings(listing, 3),
     usesApplication ? getListingPublicStats(listing.id) : Promise.resolve({ applicantCount: null, queuePosition: null }),
+    trackEvent('listing_view', { listingId: listing.id }),
   ])
 
   // Matchkoll state for the signed-in user.

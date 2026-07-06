@@ -7,6 +7,7 @@ import { FeatureCards } from '@/components/home/FeatureCards'
 import { ListingGrid } from '@/components/listings/ListingGrid'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
+import { CampaignBanner } from '@/components/marketing/CampaignBanner'
 import { getPublishedListings } from '@/lib/data/listings'
 
 export default async function HomePage() {
@@ -101,6 +102,9 @@ export default async function HomePage() {
       </section>
 
       <section className="container-shell py-16">
+        <div className="mb-10">
+          <CampaignBanner placement="home" />
+        </div>
         <SectionHeading
           eyebrow="Utvalda objekt"
           title="Ett urval av bostäder, lokaler och investeringsobjekt"
