@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { ArrowRight, BadgeCheck, Building2, ClipboardList, Inbox, LineChart, ShieldCheck, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { SectionHeading } from '@/components/ui/SectionHeading'
+import { RoiCalculator } from '@/components/sales/RoiCalculator'
+import { DemoRequestForm } from '@/components/sales/DemoRequestForm'
 import { isModuleEnabled } from '@/lib/product/modules'
 
 export const metadata: Metadata = {
@@ -33,21 +35,21 @@ const currentCapabilities = [
   },
 ]
 
-const upcomingCapabilities = [
+const workspaceCapabilities = [
   {
     icon: Users,
     title: 'Automatisk kravmatchning',
-    description: 'Definiera er uthyrningspolicy och låt Bovaro föranalysera vilka sökande som uppfyller kraven.',
+    description: 'Definiera er uthyrningspolicy och låt Matchkoll föranalysera vilka sökande som uppfyller kraven.',
   },
   {
     icon: LineChart,
     title: 'Analys och rapporter',
-    description: 'Följ visningar, ansökningar och tid till uthyrning per objekt och område.',
+    description: 'Följ visningar, ansökningar och konvertering per annons — med CSV-export.',
   },
   {
     icon: ShieldCheck,
     title: 'Visningar, erbjudanden och kontrakt',
-    description: 'Boka visningar, skicka erbjudanden och signera kontrakt digitalt i samma flöde.',
+    description: 'Boka visningar, skicka tidsbegränsade erbjudanden och hantera kontrakt med digital signering.',
   },
 ]
 
@@ -105,18 +107,18 @@ export default function HyresvardarPage() {
 
       <section className="container-shell pb-16">
         <SectionHeading
-          eyebrow="Under utveckling"
-          title="Nästa steg i hyresvärdsverktygen"
+          eyebrow="Arbetsytan"
+          title="En komplett arbetsyta för professionell uthyrning"
           description={
             landlordSaasEnabled
-              ? 'Delar av den utökade arbetsytan är aktiverad för utvalda hyresvärdar.'
-              : 'Den utökade arbetsytan för hyresvärdar byggs just nu och rullas ut stegvis. Inget av nedan är aktivt ännu.'
+              ? 'Hela arbetsytan är aktiverad: fastigheter, pipeline, meddelanden, visningar, kontrakt, analys och import.'
+              : 'Den utökade arbetsytan rullas ut stegvis.'
           }
         />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {upcomingCapabilities.map((capability) => (
-            <div key={capability.title} className="rounded-[28px] border border-dashed border-[#d7dbe7] bg-[#fbfbfe] p-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f3f4f6] text-[#6b7280]">
+          {workspaceCapabilities.map((capability) => (
+            <div key={capability.title} className="rounded-[28px] border border-[#e8ebf3] bg-white p-6 shadow-[0_16px_44px_rgba(15,23,42,0.05)]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef2ff] text-[#5b3df5]">
                 <capability.icon size={20} />
               </div>
               <div className="mt-4 text-lg font-semibold text-[#111827]">{capability.title}</div>
@@ -126,17 +128,33 @@ export default function HyresvardarPage() {
         </div>
       </section>
 
+      <section className="container-shell pb-16">
+        <SectionHeading
+          eyebrow="ROI-kalkyl"
+          title="Vad är kortare vakans och mindre administration värt?"
+          description="Fyll i era siffror och få en konservativ uppskattning. Lämna e-post så går vi igenom kalkylen tillsammans."
+        />
+        <div className="mt-8">
+          <RoiCalculator />
+        </div>
+      </section>
+
       <section className="container-shell pb-20">
         <div className="rounded-[36px] bg-[linear-gradient(135deg,#101228,#1e2e72)] p-8 text-white md:p-12">
-          <h2 className="text-3xl font-semibold">Kom igång som hyresvärd</h2>
-          <p className="mt-3 max-w-2xl text-white/78">
-            Skapa ett företagskonto, bli verifierad av Bovaro och publicera er första annons. Har ni frågor om att
-            flytta över befintliga bestånd? Kontakta oss på support@bovaro.se.
-          </p>
-          <div className="mt-6">
-            <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
-              Skapa företagskonto
-            </Button>
+          <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+            <div>
+              <h2 className="text-3xl font-semibold">Kom igång som hyresvärd</h2>
+              <p className="mt-3 max-w-2xl text-white/78">
+                Skapa ett företagskonto, bli verifierad av Bovaro och publicera er första annons — eller boka en
+                personlig demo så visar vi arbetsytan med ert bestånd som exempel.
+              </p>
+              <div className="mt-6">
+                <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
+                  Skapa företagskonto
+                </Button>
+              </div>
+            </div>
+            <DemoRequestForm />
           </div>
         </div>
       </section>

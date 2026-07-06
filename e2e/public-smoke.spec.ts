@@ -43,6 +43,13 @@ test.describe('Publika sidor', () => {
     }
   })
 
+  test('ROI-kalkylen räknar direkt i webbläsaren', async ({ page }) => {
+    await page.goto('/hyresvardar')
+    await expect(page.getByText('Räkna på er besparing')).toBeVisible()
+    await expect(page.getByText(/Uppskattad besparing/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Boka demo' })).toBeVisible()
+  })
+
   test('juridiska sidor visar version', async ({ page }) => {
     for (const path of ['/terms', '/privacy', '/cookies', '/advertiser-terms']) {
       await page.goto(path)

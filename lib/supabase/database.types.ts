@@ -3738,6 +3738,60 @@ export type Database = {
           },
         ]
       }
+      sales_leads: {
+        Row: {
+          assigned_to: string | null
+          city: string | null
+          company_name: string
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          internal_note: string | null
+          message: string | null
+          phone: string | null
+          roi_snapshot: Json | null
+          source: string
+          status: string
+          units_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          city?: string | null
+          company_name: string
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          internal_note?: string | null
+          message?: string | null
+          phone?: string | null
+          roi_snapshot?: Json | null
+          source?: string
+          status?: string
+          units_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          city?: string | null
+          company_name?: string
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          internal_note?: string | null
+          message?: string | null
+          phone?: string | null
+          roi_snapshot?: Json | null
+          source?: string
+          status?: string
+          units_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_search_matches: {
         Row: {
           created_at: string

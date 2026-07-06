@@ -15,6 +15,7 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
+  TrendingUp,
   Users,
   Wallet,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
   { href: '/admin/byta', label: 'Byten', icon: ArrowLeftRight },
+  { href: '/admin/sales', label: 'Säljtavla', icon: TrendingUp },
   { href: '/admin/billing', label: 'Fakturering', icon: Wallet },
   { href: '/admin/analytics', label: 'Analys', icon: BarChart3 },
   { href: '/admin/campaigns', label: 'Kampanjer', icon: Megaphone },
