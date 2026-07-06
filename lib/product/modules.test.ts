@@ -27,13 +27,15 @@ describe('parseModuleOverride', () => {
 describe('isModuleEnabled', () => {
   it('uses defaults when no override exists', () => {
     expect(isModuleEnabled('rentalMarketplace', {} as NodeJS.ProcessEnv)).toBe(true)
-    expect(isModuleEnabled('bovaroByta', {} as NodeJS.ProcessEnv)).toBe(false)
+    // Byta shipped in Batch 12 and is on by default; publicApi is still off.
+    expect(isModuleEnabled('bovaroByta', {} as NodeJS.ProcessEnv)).toBe(true)
+    expect(isModuleEnabled('publicApi', {} as NodeJS.ProcessEnv)).toBe(false)
   })
 
   it('honours environment overrides in both directions', () => {
     expect(
-      isModuleEnabled('bovaroByta', { NEXT_PUBLIC_MODULE_BOVARO_BYTA: 'true' } as unknown as NodeJS.ProcessEnv),
-    ).toBe(true)
+      isModuleEnabled('bovaroByta', { NEXT_PUBLIC_MODULE_BOVARO_BYTA: 'false' } as unknown as NodeJS.ProcessEnv),
+    ).toBe(false)
     expect(
       isModuleEnabled('rentalMarketplace', {
         NEXT_PUBLIC_MODULE_RENTAL_MARKETPLACE: 'false',

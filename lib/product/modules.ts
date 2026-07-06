@@ -33,7 +33,7 @@ const MODULE_DEFAULTS: Record<ProductModule, boolean> = {
   commercialMarketplace: true,
   saleMarketplace: true,
   bovaroPlus: false,
-  bovaroByta: false,
+  bovaroByta: true,
   landlordSaas: false,
   externalQueues: false,
   publicApi: false,

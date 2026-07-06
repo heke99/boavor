@@ -3,6 +3,7 @@ import { ArrowLeftRight, ArrowRight, Lock, ShieldCheck, UserCheck } from 'lucide
 import { Button } from '@/components/ui/Button'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { isModuleEnabled } from '@/lib/product/modules'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 
 export const metadata: Metadata = {
   title: 'Bovaro Byta — byt bostad tryggt',
@@ -28,8 +29,20 @@ const principles = [
   },
 ]
 
-export default function BytaPage() {
+export default async function BytaPage() {
   const bytaEnabled = isModuleEnabled('bovaroByta')
+
+  // Honest public stat: number of active exchange ads (service role count —
+  // profile contents remain restricted to verified users).
+  let activeCount: number | null = null
+  const serviceClient = createSupabaseServiceClient()
+  if (serviceClient) {
+    const { count } = await serviceClient
+      .from('exchange_profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+    activeCount = count ?? 0
+  }
 
   return (
     <>
@@ -52,15 +65,33 @@ export default function BytaPage() {
               <div className="mt-8 inline-flex items-center gap-2 rounded-2xl border border-amber-200/40 bg-amber-500/15 px-4 py-3 text-sm font-semibold text-amber-100">
                 Bovaro Byta är under uppbyggnad och har inte öppnat ännu.
               </div>
+            ) : activeCount !== null ? (
+              <div className="mt-8 inline-flex items-center gap-2 rounded-2xl border border-white/18 bg-white/10 px-4 py-3 text-sm font-semibold text-white">
+                {activeCount} aktiva bytesannonser just nu
+              </div>
             ) : null}
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
-                Skapa konto så är du redo
-                <ArrowRight size={16} className="ml-2" />
-              </Button>
-              <Button href="/rent" className="border border-white/22 bg-white/10 !text-white hover:bg-white/16">
-                Se lediga hyresbostäder
-              </Button>
+              {bytaEnabled ? (
+                <>
+                  <Button href="/byta/skapa" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
+                    Skapa bytesannons
+                    <ArrowRight size={16} className="ml-2" />
+                  </Button>
+                  <Button href="/dashboard/byten" className="border border-white/22 bg-white/10 !text-white hover:bg-white/16">
+                    Mina byten och matchningar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
+                    Skapa konto så är du redo
+                    <ArrowRight size={16} className="ml-2" />
+                  </Button>
+                  <Button href="/rent" className="border border-white/22 bg-white/10 !text-white hover:bg-white/16">
+                    Se lediga hyresbostäder
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

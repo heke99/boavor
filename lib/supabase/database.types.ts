@@ -829,6 +829,222 @@ export type Database = {
           },
         ]
       }
+      exchange_interests: {
+        Row: {
+          created_at: string
+          from_profile_id: string
+          id: string
+          status: string
+          to_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_profile_id: string
+          id?: string
+          status?: string
+          to_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          from_profile_id?: string
+          id?: string
+          status?: string
+          to_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_interests_from_profile_id_fkey"
+            columns: ["from_profile_id"]
+            isOneToOne: false
+            referencedRelation: "exchange_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_interests_to_profile_id_fkey"
+            columns: ["to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "exchange_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exchange_matches: {
+        Row: {
+          created_at: string
+          id: string
+          profile_a: string
+          profile_b: string
+          status: string
+          thread_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_a: string
+          profile_b: string
+          status?: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_a?: string
+          profile_b?: string
+          status?: string
+          thread_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_matches_profile_a_fkey"
+            columns: ["profile_a"]
+            isOneToOne: false
+            referencedRelation: "exchange_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_matches_profile_b_fkey"
+            columns: ["profile_b"]
+            isOneToOne: false
+            referencedRelation: "exchange_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_matches_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exchange_profiles: {
+        Row: {
+          created_at: string
+          current_area: string | null
+          current_area_sqm: number | null
+          current_city: string
+          current_contract_type: string
+          current_floor: string | null
+          current_has_accessibility: boolean
+          current_has_balcony: boolean
+          current_has_elevator: boolean
+          current_landlord_name: string | null
+          current_rent: number
+          current_rooms: number
+          current_street: string | null
+          description: string | null
+          id: string
+          show_exact_address: boolean
+          show_name_before_match: boolean
+          status: string
+          updated_at: string
+          user_id: string
+          wanted_areas: string[]
+          wanted_cities: string[]
+          wanted_max_rent: number | null
+          wanted_min_area_sqm: number | null
+          wanted_min_rooms: number | null
+          wanted_needs_accessibility: boolean
+        }
+        Insert: {
+          created_at?: string
+          current_area?: string | null
+          current_area_sqm?: number | null
+          current_city: string
+          current_contract_type?: string
+          current_floor?: string | null
+          current_has_accessibility?: boolean
+          current_has_balcony?: boolean
+          current_has_elevator?: boolean
+          current_landlord_name?: string | null
+          current_rent: number
+          current_rooms: number
+          current_street?: string | null
+          description?: string | null
+          id?: string
+          show_exact_address?: boolean
+          show_name_before_match?: boolean
+          status?: string
+          updated_at?: string
+          user_id: string
+          wanted_areas?: string[]
+          wanted_cities?: string[]
+          wanted_max_rent?: number | null
+          wanted_min_area_sqm?: number | null
+          wanted_min_rooms?: number | null
+          wanted_needs_accessibility?: boolean
+        }
+        Update: {
+          created_at?: string
+          current_area?: string | null
+          current_area_sqm?: number | null
+          current_city?: string
+          current_contract_type?: string
+          current_floor?: string | null
+          current_has_accessibility?: boolean
+          current_has_balcony?: boolean
+          current_has_elevator?: boolean
+          current_landlord_name?: string | null
+          current_rent?: number
+          current_rooms?: number
+          current_street?: string | null
+          description?: string | null
+          id?: string
+          show_exact_address?: boolean
+          show_name_before_match?: boolean
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wanted_areas?: string[]
+          wanted_cities?: string[]
+          wanted_max_rent?: number | null
+          wanted_min_area_sqm?: number | null
+          wanted_min_rooms?: number | null
+          wanted_needs_accessibility?: boolean
+        }
+        Relationships: []
+      }
+      exchange_reports: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          profile_id: string
+          reason_type: string
+          reporter_user_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          profile_id: string
+          reason_type: string
+          reporter_user_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          profile_id?: string
+          reason_type?: string
+          reporter_user_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "exchange_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -3468,6 +3684,7 @@ export type Database = {
         Args: { target_company_id: string }
         Returns: boolean
       }
+      current_user_is_identity_verified: { Args: never; Returns: boolean }
       current_user_is_super_admin: { Args: never; Returns: boolean }
       current_user_is_thread_participant: {
         Args: { target_thread_id: string }
@@ -3531,6 +3748,10 @@ export type Database = {
       public_listing_applicant_count: {
         Args: { p_listing_id: string }
         Returns: number
+      }
+      register_exchange_interest: {
+        Args: { p_interested: boolean; p_to_profile_id: string }
+        Returns: Json
       }
       reset_queue_points: {
         Args: { p_reason: string; p_user_id: string }

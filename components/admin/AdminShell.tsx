@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import {
   Activity,
+  ArrowLeftRight,
   Building2,
   ClipboardList,
   Clock3,
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
+  { href: '/admin/byta', label: 'Byten', icon: ArrowLeftRight },
   { href: '/admin/billing', label: 'Fakturering', icon: Wallet },
   { href: '/admin/system', label: 'System', icon: Activity },
 ]

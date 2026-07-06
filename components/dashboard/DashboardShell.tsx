@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import {
+  ArrowLeftRight,
   Building2,
   FileText,
   Fingerprint,
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/dashboard/documents', label: 'Dokument', icon: WalletCards },
   { href: '/dashboard/applications', label: 'Ansökningar', icon: FileText },
   { href: '/dashboard/messages', label: 'Meddelanden', icon: MessageSquare },
+  { href: '/dashboard/byten', label: 'Byten', icon: ArrowLeftRight },
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
   { href: '/dashboard/saved-searches', label: 'Sparade sökningar', icon: SearchCheck },
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
