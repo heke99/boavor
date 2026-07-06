@@ -175,6 +175,16 @@ export default async function LandlordSettingsPage() {
           ))}
         </div>
       </Card>
+
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-[#111827]">API och webhooks</h2>
+        <p className="mt-1 text-sm text-[#6b7280]">
+          Integrera Bovaro med era egna system: API-nycklar med behörigheter och signerade webhooks vid nya ansökningar.
+        </p>
+        <Button href="/landlord/settings/api" variant="ghost" className="mt-4 border border-[#d7dbe7] !text-[#111827]">
+          Hantera API-nycklar och webhooks
+        </Button>
+      </Card>
     </LandlordShell>
   )
 }

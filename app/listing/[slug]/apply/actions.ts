@@ -241,6 +241,23 @@ export async function submitRentalApplication(formData: FormData) {
     metadata: { city: listing.city, listing_type: listing.listingType },
   })
 
+  // Outbound webhook for the landlord's integrations (fan-out via definer
+  // function; no-op when the landlord has no matching endpoints).
+  await supabase.rpc('enqueue_webhook_event', {
+    p_event_type: 'application.created',
+    // SQL accepts null for both owner args; the generated types do not.
+    p_company_id: owner.company_id as string,
+    p_owner_user_id: owner.created_by as string,
+    p_payload: {
+      application_id: created.id,
+      listing_id: owner.id,
+      listing_slug: listing.slug,
+      listing_title: listing.title,
+      status: 'submitted',
+      created_at: new Date().toISOString(),
+    },
+  })
+
   revalidatePath('/dashboard/applications')
   revalidatePath(`/listing/${slug}`)
   redirect('/dashboard/applications?submitted=1')
