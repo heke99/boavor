@@ -1338,6 +1338,222 @@ export type Database = {
           },
         ]
       }
+      message_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          message_id: string
+          size_bytes: number | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          message_id: string
+          size_bytes?: number | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          message_id?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          thread_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          thread_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_events_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_participants: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          last_read_at: string | null
+          participant_role: string
+          thread_id: string
+          unread_reminded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_read_at?: string | null
+          participant_role?: string
+          thread_id: string
+          unread_reminded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_read_at?: string | null
+          participant_role?: string
+          thread_id?: string
+          unread_reminded_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_participants_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_threads: {
+        Row: {
+          application_id: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_message_at: string
+          listing_id: string | null
+          locked_at: string | null
+          locked_by: string | null
+          response_deadline_at: string | null
+          subject: string
+          thread_type: string
+          updated_at: string
+        }
+        Insert: {
+          application_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string
+          listing_id?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          response_deadline_at?: string | null
+          subject: string
+          thread_type?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_message_at?: string
+          listing_id?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          response_deadline_at?: string | null
+          subject?: string
+          thread_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_threads_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "rental_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_user_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_user_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_user_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -2708,6 +2924,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_application_thread: {
+        Args: { p_application_id: string; p_body: string; p_subject: string }
+        Returns: string
+      }
       current_user_can_manage_application: {
         Args: { target_application_id: string }
         Returns: boolean
@@ -2730,7 +2950,15 @@ export type Database = {
       }
       current_user_company_ids: { Args: never; Returns: string[] }
       current_user_is_admin: { Args: never; Returns: boolean }
+      current_user_is_company_manager: {
+        Args: { target_company_id: string }
+        Returns: boolean
+      }
       current_user_is_super_admin: { Args: never; Returns: boolean }
+      current_user_is_thread_participant: {
+        Args: { target_thread_id: string }
+        Returns: boolean
+      }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]

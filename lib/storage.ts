@@ -1,4 +1,5 @@
 export const PROFILE_DOCUMENTS_BUCKET = 'profile-documents'
+export const MESSAGE_ATTACHMENTS_BUCKET = 'message-attachments'
 export const LISTING_IMAGES_BUCKET = 'listing-images'
 export const MAX_LISTING_IMAGE_SIZE = 10 * 1024 * 1024
 export const MAX_PROFILE_DOCUMENT_SIZE = 15 * 1024 * 1024
@@ -40,6 +41,15 @@ export function validateListingImage(file: File) {
 export function validateProfileDocument(file: File) {
   if (!PROFILE_DOCUMENT_MIME_TYPES.has(file.type)) return 'Dokumentet måste vara pdf, bild, doc eller docx.'
   if (file.size > MAX_PROFILE_DOCUMENT_SIZE) return 'Dokumentet får vara max 15 MB.'
+  return null
+}
+
+export const MAX_MESSAGE_ATTACHMENT_SIZE = 30 * 1024 * 1024
+const MESSAGE_ATTACHMENT_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf'])
+
+export function validateMessageAttachment(file: File) {
+  if (!MESSAGE_ATTACHMENT_MIME_TYPES.has(file.type)) return 'Bilagan måste vara jpg, png eller pdf.'
+  if (file.size > MAX_MESSAGE_ATTACHMENT_SIZE) return 'Bilagan får vara max 30 MB.'
   return null
 }
 

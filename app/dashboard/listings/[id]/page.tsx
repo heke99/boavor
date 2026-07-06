@@ -19,6 +19,7 @@ import {
   updateInquiryStatusAction,
   updateListingStatusAction,
 } from '@/app/dashboard/listings/actions'
+import { startApplicationThreadAction } from '@/app/dashboard/messages/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -270,6 +271,15 @@ export default async function DashboardListingDetailPage({ params }: { params: P
                           <Input name="message" placeholder="Begär komplettering…" className="h-10 rounded-2xl text-xs" />
                           <Button type="submit" variant="ghost" className="h-9 border border-black/10 text-xs">
                             Skicka begäran
+                          </Button>
+                        </form>
+
+                        <form action={startApplicationThreadAction} className="flex flex-col gap-2">
+                          <input type="hidden" name="applicationId" value={application.id} />
+                          <input type="hidden" name="subject" value="" />
+                          <Input name="body" placeholder="Starta meddelandetråd…" className="h-10 rounded-2xl text-xs" />
+                          <Button type="submit" variant="ghost" className="h-9 border border-black/10 text-xs">
+                            Skicka meddelande
                           </Button>
                         </form>
                       </div>
