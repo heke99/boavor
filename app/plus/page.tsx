@@ -3,6 +3,8 @@ import { ArrowRight, BellRing, FileSearch, Layers, Sparkles } from 'lucide-react
 import { Button } from '@/components/ui/Button'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { isModuleEnabled } from '@/lib/product/modules'
+import { isStripeConfigured } from '@/lib/billing/stripe'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'Bovaro Plus — Bovaro',
@@ -28,8 +30,23 @@ const plannedBenefits = [
   },
 ]
 
-export default function PlusPage() {
+export default async function PlusPage() {
   const plusEnabled = isModuleEnabled('bovaroPlus')
+
+  // Purchasable only when the plan is activated by the admin AND Stripe is
+  // configured — otherwise the page states honestly that Plus is not open.
+  let purchasable = false
+  let priceSek: number | null = null
+  const supabase = await createSupabaseServerClient()
+  if (supabase && isStripeConfigured()) {
+    const { data: plan } = await supabase
+      .from('subscription_plans')
+      .select('is_active, stripe_price_id, amount_sek')
+      .eq('code', 'bovaro_plus')
+      .maybeSingle()
+    purchasable = Boolean(plan?.is_active && plan.stripe_price_id)
+    priceSek = plan?.amount_sek ?? null
+  }
 
   return (
     <>
@@ -48,16 +65,23 @@ export default function PlusPage() {
               Bovaro Plus blir en frivillig premiumtjänst för dig som söker aktivt. Grundtjänsten — kön, profilen och
               ansökningarna — är och förblir kostnadsfri.
             </p>
-            {!plusEnabled ? (
+            {!purchasable && !plusEnabled ? (
               <div className="mt-8 inline-flex items-center gap-2 rounded-2xl border border-amber-200/40 bg-amber-500/15 px-4 py-3 text-sm font-semibold text-amber-100">
                 Bovaro Plus är under uppbyggnad och går ännu inte att teckna.
               </div>
             ) : null}
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
-                Skapa kostnadsfritt konto
-                <ArrowRight size={16} className="ml-2" />
-              </Button>
+              {purchasable ? (
+                <Button href="/dashboard/billing" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
+                  Teckna Bovaro Plus{priceSek ? ` – ${priceSek} kr/mån` : ''}
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              ) : (
+                <Button href="/register" className="border border-white/22 bg-white !text-[#111827] hover:bg-white/90">
+                  Skapa kostnadsfritt konto
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              )}
               <Button href="/bostadsko" className="border border-white/22 bg-white/10 !text-white hover:bg-white/16">
                 Läs om bostadskön
               </Button>

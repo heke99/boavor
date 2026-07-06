@@ -167,6 +167,68 @@ export type Database = {
           },
         ]
       }
+      billing_customers: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          stripe_customer_id: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          stripe_customer_id: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          stripe_customer_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_events: {
+        Row: {
+          created_at: string
+          error: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          stripe_event_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          stripe_event_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          stripe_event_id?: string
+        }
+        Relationships: []
+      }
       buildings: {
         Row: {
           build_year: number | null
@@ -425,6 +487,63 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          company_id: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_code: string
+          provider: string
+          provider_subscription_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          company_id: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_code: string
+          provider?: string
+          provider_subscription_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          company_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_code?: string
+          provider?: string
+          provider_subscription_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2789,33 +2908,51 @@ export type Database = {
           amount_sek: number
           code: string
           created_at: string
+          description: string | null
+          features: Json
           id: string
           interval_unit: string
           is_active: boolean
+          is_public: boolean
           max_active_applications: number | null
           name: string
+          plan_audience: string
+          stripe_price_id: string | null
+          trial_days: number | null
           updated_at: string
         }
         Insert: {
           amount_sek: number
           code: string
           created_at?: string
+          description?: string | null
+          features?: Json
           id?: string
           interval_unit?: string
           is_active?: boolean
+          is_public?: boolean
           max_active_applications?: number | null
           name: string
+          plan_audience?: string
+          stripe_price_id?: string | null
+          trial_days?: number | null
           updated_at?: string
         }
         Update: {
           amount_sek?: number
           code?: string
           created_at?: string
+          description?: string | null
+          features?: Json
           id?: string
           interval_unit?: string
           is_active?: boolean
+          is_public?: boolean
           max_active_applications?: number | null
           name?: string
+          plan_audience?: string
+          stripe_price_id?: string | null
+          trial_days?: number | null
           updated_at?: string
         }
         Relationships: []

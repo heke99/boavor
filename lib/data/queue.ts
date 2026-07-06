@@ -1,9 +1,9 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { createSupabaseServerClient as CreateClient } from '@/lib/supabase/server'
+import { resolveEntitlements } from '@/lib/billing/entitlements'
 import {
   checkApplicationLimit,
   isActiveApplicationStatus,
-  resolveApplicationLimit,
   type ApplicationLimitCheck,
 } from '@/lib/queue/limits'
 
@@ -49,7 +49,7 @@ export async function getQueueLedger(limit = 20): Promise<QueueLedgerEntry[]> {
   }))
 }
 
-/** Server-side application limit check for a user. */
+/** Server-side application limit check for a user (grace-period aware). */
 export async function getApplicationLimitCheck(
   supabase: SupabaseServerClient,
   userId: string,
@@ -57,24 +57,31 @@ export async function getApplicationLimitCheck(
   const [{ data: subscriptions }, { data: applications }] = await Promise.all([
     supabase
       .from('user_subscriptions')
-      .select('status, subscription_plans(max_active_applications)')
+      .select('plan_code, status, provider, current_period_end, subscription_plans(code, max_active_applications)')
       .eq('user_id', userId),
     supabase.from('rental_applications').select('status').eq('user_id', userId),
   ])
 
-  const limit = resolveApplicationLimit(
+  const entitlements = resolveEntitlements(
+    (subscriptions ?? []).map((row) => ({
+      planCode: row.plan_code,
+      status: row.status,
+      currentPeriodEnd: row.current_period_end,
+      provider: row.provider,
+    })),
     (subscriptions ?? []).map((row) => {
-      const plan = row.subscription_plans as { max_active_applications: number | null } | null
+      const plan = row.subscription_plans as { code: string; max_active_applications: number | null } | null
       return {
-        status: row.status,
+        code: plan?.code ?? row.plan_code,
         maxActiveApplications: plan?.max_active_applications ?? null,
+        features: [],
       }
     }),
   )
 
   const activeCount = (applications ?? []).filter((row) => isActiveApplicationStatus(row.status)).length
 
-  return checkApplicationLimit(activeCount, limit)
+  return checkApplicationLimit(activeCount, entitlements.maxActiveApplications)
 }
 
 /** Queue points of accepted, linked co-applicants (for household rules). */

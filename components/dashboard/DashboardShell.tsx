@@ -28,6 +28,7 @@ const navItems = [
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
   { href: '/dashboard/policies', label: 'Policyer', icon: ShieldCheck },
   { href: '/dashboard/inquiries', label: 'Leads', icon: Inbox },
+  { href: '/dashboard/billing', label: 'Fakturering', icon: WalletCards },
   { href: '/dashboard/settings', label: 'Inställningar', icon: Settings },
 ]
 

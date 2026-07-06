@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoutButton } from '@/components/auth/LogoutButton'
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/admin/listings', label: 'Objekt', icon: ClipboardList },
   { href: '/admin/applications', label: 'Ansökningar', icon: FileText },
   { href: '/admin/inquiries', label: 'Leads', icon: Inbox },
+  { href: '/admin/billing', label: 'Fakturering', icon: Wallet },
   { href: '/admin/system', label: 'System', icon: Activity },
 ]
 
