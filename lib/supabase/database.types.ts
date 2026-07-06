@@ -2509,6 +2509,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          is_public: boolean
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          is_public?: boolean
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          is_public?: boolean
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       policy_evaluations: {
         Row: {
           context: string
@@ -3567,6 +3597,47 @@ export type Database = {
         }
         Relationships: []
       }
+      support_access_grants: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+          thread_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          thread_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_access_grants_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unit_documents: {
         Row: {
           created_at: string
@@ -4015,6 +4086,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_recent_message_threads: {
+        Args: { p_limit?: number }
+        Returns: {
+          application_id: string
+          company_id: string
+          created_at: string
+          id: string
+          last_message_at: string
+          listing_id: string
+          message_count: number
+          participant_count: number
+          subject: string
+          thread_type: string
+        }[]
+      }
       admin_set_queue_status: {
         Args: {
           p_note: string
@@ -4073,6 +4159,10 @@ export type Database = {
         Returns: boolean
       }
       current_user_company_ids: { Args: never; Returns: string[] }
+      current_user_has_support_access: {
+        Args: { target_thread_id: string }
+        Returns: boolean
+      }
       current_user_is_admin: { Args: never; Returns: boolean }
       current_user_is_company_manager: {
         Args: { target_company_id: string }
