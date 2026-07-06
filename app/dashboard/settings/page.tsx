@@ -8,6 +8,7 @@ import { getDashboardProfile } from '@/lib/data/profile'
 import { createPrivacyRequestAction, updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
 import { updateNotificationPreferencesAction } from '@/app/dashboard/notifications/actions'
 import { getAuthContext } from '@/lib/auth/permissions'
+import { PushSettings } from '@/components/pwa/PushSettings'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +91,9 @@ export default async function DashboardSettingsPage() {
             ))}
             <Button variant="secondary">Spara e-postnotiser</Button>
           </form>
+          <div className="mt-4">
+            <PushSettings />
+          </div>
         </Card>
 
         <Card className="p-6">

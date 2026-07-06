@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { runCronJob } from '@/lib/cron/run'
 import { sendTemplatedEmail } from '@/lib/email/send'
+import { isPushConfigured, sendWebPush } from '@/lib/push/provider'
 import { getSiteUrl } from '@/lib/url'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     let remindersSent = 0
     let participantsChecked = 0
+    let pushesSent = 0
 
     for (const thread of threads ?? []) {
       const { data: participants } = await supabase
@@ -70,6 +72,35 @@ export async function POST(request: NextRequest) {
           },
         })
 
+        // Web push (best effort, only when VAPID is configured).
+        if (isPushConfigured()) {
+          const { data: subscriptions } = await supabase
+            .from('push_subscriptions')
+            .select('id, endpoint, p256dh, auth')
+            .eq('user_id', participant.user_id)
+            .is('disabled_at', null)
+
+          for (const subscription of subscriptions ?? []) {
+            const pushResult = await sendWebPush(subscription, {
+              title: 'Oläst meddelande på Bovaro',
+              body: thread.subject,
+              url: `${inboxPath}?thread=${thread.id}`,
+            })
+            if (pushResult.status === 'gone') {
+              await supabase
+                .from('push_subscriptions')
+                .update({ disabled_at: new Date().toISOString() })
+                .eq('id', subscription.id)
+            } else if (pushResult.status === 'sent') {
+              pushesSent += 1
+              await supabase
+                .from('push_subscriptions')
+                .update({ last_used_at: new Date().toISOString() })
+                .eq('id', subscription.id)
+            }
+          }
+        }
+
         if (sendResult.status !== 'failed') {
           await supabase
             .from('message_participants')
@@ -80,7 +111,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return { threadsChecked: threads?.length ?? 0, participantsChecked, remindersSent }
+    return { threadsChecked: threads?.length ?? 0, participantsChecked, remindersSent, pushesSent }
   })
 }
 
