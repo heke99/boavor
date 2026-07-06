@@ -67,9 +67,15 @@ export default function RootLayout({
   return (
     <html lang="sv" data-scroll-behavior="smooth">
       <body className="pb-16 md:pb-0">
+        <a
+          href="#huvudinnehall"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-2xl focus:bg-[#111827] focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Hoppa till innehållet
+        </a>
         <MaintenanceBanner />
         <Header />
-        <main>{children}</main>
+        <main id="huvudinnehall">{children}</main>
         <Footer />
         <MobileBottomNav />
         <PwaRegister />

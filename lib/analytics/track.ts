@@ -8,6 +8,7 @@ export type TrackableEvent =
   | 'saved_search_created'
   | 'exchange_interest'
   | 'registration_completed'
+  | 'queue_joined'
 
 /**
  * Fire-and-forget analytics tracking. Never throws and never blocks the

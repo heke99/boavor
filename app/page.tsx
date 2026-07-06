@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Building2, CheckCircle2, Home, ShieldCheck, Spa
 import { Suspense } from 'react'
 import { HeroSearch } from '@/components/home/HeroSearch'
 import { StatsStrip } from '@/components/home/StatsStrip'
+import { TrustStrip } from '@/components/home/TrustStrip'
 import { AreaGrid } from '@/components/home/AreaGrid'
 import { FeatureCards } from '@/components/home/FeatureCards'
 import { ListingGrid } from '@/components/listings/ListingGrid'
@@ -100,6 +101,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <TrustStrip />
 
       <section className="container-shell py-16">
         <div className="mb-10">

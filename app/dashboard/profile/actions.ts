@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { trackEvent } from '@/lib/analytics/track'
 import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri, sanitizeStorageFileName, toStorageUri, validateProfileDocument } from '@/lib/storage'
 import type { AccountType, AppRole, CompanyType, LegalForm, PreferredListingIntent } from '@/lib/types'
 
@@ -370,6 +371,8 @@ export async function startQueueMembershipAction() {
       note: 'Kömedlemskap startat.',
     })
   }
+
+  await trackEvent('queue_joined')
 
   revalidatePath('/dashboard/profile')
 }

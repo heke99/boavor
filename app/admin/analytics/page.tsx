@@ -18,6 +18,7 @@ const metricLabels: Record<string, string> = {
   'events.saved_search_created': 'Sparade sökningar',
   'events.exchange_interest': 'Bytesintressen',
   'events.registration_completed': 'Slutförda registreringar',
+  'events.queue_joined': 'Nya kömedlemmar',
 }
 
 const eventLabels: Record<string, string> = {
@@ -28,6 +29,7 @@ const eventLabels: Record<string, string> = {
   saved_search_created: 'Sparade sökningar',
   exchange_interest: 'Bytesintressen',
   registration_completed: 'Registreringar',
+  queue_joined: 'Kömedlemskap',
 }
 
 function MetricTrend({ metric, rows }: { metric: string; rows: AdminDailyMetric[] }) {
