@@ -9,6 +9,7 @@ import { requireVerifiedAdult } from '@/lib/data/identity'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { trackEvent } from '@/lib/analytics/track'
 import type { InquiryType } from '@/lib/types'
+import { logError } from '@/lib/log'
 
 export async function runMatchkollAction(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -138,7 +139,7 @@ export async function submitListingInquiry(formData: FormData) {
   })
 
   if (error) {
-    console.error('Failed to create listing inquiry', error)
+    logError('Failed to create listing inquiry', error)
     redirect(`/listing/${slug}?inquiry=failed`)
   }
 

@@ -11,6 +11,7 @@ import { getApplicationLimitCheck, getHouseholdCoApplicantPoints } from '@/lib/d
 import { DEFAULT_HOUSEHOLD_QUEUE_RULE, resolveHouseholdQueuePoints } from '@/lib/queue/household'
 import { runMatchkoll } from '@/lib/data/matchkoll'
 import { trackEvent } from '@/lib/analytics/track'
+import { logError } from '@/lib/log'
 
 export async function submitRentalApplication(formData: FormData) {
   const slug = String(formData.get('slug') ?? '')
@@ -136,7 +137,7 @@ export async function submitRentalApplication(formData: FormData) {
     .single()
 
   if (error || !created) {
-    console.error('Failed to create rental application', error)
+    logError('Failed to create rental application', error)
     redirect(`/listing/${slug}/apply?error=failed`)
   }
 

@@ -106,8 +106,17 @@ export default async function DashboardSettingsPage() {
           <h2 className="text-2xl font-semibold text-[#111827]">Integritet och data</h2>
           <div className="mt-4 space-y-3 text-sm leading-6 text-[#6b7280]">
             <p>Personnummer och dokument ska endast visas där det behövs för bostadsflödet.</p>
-            <p>Skicka en verifierad begäran om registerutdrag, rättelse, begränsning eller radering.</p>
+            <p>
+              Du kan ladda ner en kopia av dina uppgifter direkt, eller skicka en begäran om rättelse, begränsning
+              eller radering.
+            </p>
           </div>
+          <a
+            href="/dashboard/settings/export"
+            className="mt-4 inline-flex items-center rounded-2xl border border-[#d7dbe7] bg-white px-5 py-3 text-sm font-semibold text-[#111827] transition hover:bg-[#f7f8fc]"
+          >
+            Ladda ner mina uppgifter (JSON)
+          </a>
           <form action={createPrivacyRequestAction} className="mt-5 space-y-4">
             <Select name="requestType" defaultValue="export">
               <option value="export">Registerutdrag</option>

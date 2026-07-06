@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { trackEvent } from '@/lib/analytics/track'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { PropertyType, SavedSearchMode } from '@/lib/types'
 
 async function requireUser() {
@@ -44,6 +45,14 @@ export async function saveSearchAction(formData: FormData) {
 
   const title = String(formData.get('title') ?? '').trim()
   if (!title) return
+
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'saved_search_create',
+    subject: user.id,
+    limit: 20,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) return
 
   await supabase.from('saved_searches').insert({
     user_id: user.id,

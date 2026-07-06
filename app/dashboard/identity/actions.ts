@@ -13,6 +13,7 @@ import {
   getBirthDate,
   normalizePersonalIdentityNumber,
 } from '@/lib/identity/personnummer'
+import { logError } from '@/lib/log'
 
 export type IdentityActionResult =
   | { ok: true; verificationId?: string; status?: string }
@@ -88,7 +89,7 @@ export async function startIdentityVerificationAction(formData: FormData): Promi
   try {
     session = await provider.start({ userId: user.id })
   } catch (error) {
-    console.error('Identity provider start failed', error)
+    logError('Identity provider start failed', error)
     return { ok: false, error: 'Identitetstjänsten kunde inte nås. Försök igen senare.' }
   }
 
@@ -107,7 +108,7 @@ export async function startIdentityVerificationAction(formData: FormData): Promi
     .single()
 
   if (insertError || !created) {
-    console.error('Failed to create identity verification', insertError)
+    logError('Failed to create identity verification', insertError)
     return { ok: false, error: 'Verifieringen kunde inte startas. Försök igen.' }
   }
 
@@ -151,7 +152,7 @@ export async function pollIdentityVerificationAction(verificationId: string): Pr
       startedAt: new Date(verification.created_at),
     })
   } catch (error) {
-    console.error('Identity provider check failed', error)
+    logError('Identity provider check failed', error)
     return { ok: false, error: 'Kunde inte hämta status från identitetstjänsten.' }
   }
 
@@ -211,7 +212,7 @@ export async function pollIdentityVerificationAction(verificationId: string): Pr
   })
 
   if (finalizeError) {
-    console.error('Failed to finalize identity verification', finalizeError)
+    logError('Failed to finalize identity verification', finalizeError)
     return { ok: false, error: 'Verifieringen kunde inte slutföras. Försök igen.' }
   }
 
@@ -240,7 +241,7 @@ export async function cancelIdentityVerificationAction(verificationId: string): 
     try {
       await resolution.provider.cancel(verification.provider_session_id ?? '')
     } catch (error) {
-      console.error('Identity provider cancel failed', error)
+      logError('Identity provider cancel failed', error)
     }
   }
 

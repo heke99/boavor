@@ -146,6 +146,15 @@ export async function reportExchangeProfileAction(formData: FormData) {
   const detail = String(formData.get('detail') ?? '').trim() || null
   if (!profileId || !['fake_ad', 'inappropriate', 'fraud', 'other'].includes(reasonType)) return
 
+  // Abuse guard: mass-reporting is itself an abuse vector.
+  const allowed = await checkRateLimit(supabase, {
+    scope: 'exchange_report',
+    subject: user.id,
+    limit: 5,
+    windowSeconds: 60 * 60,
+  })
+  if (!allowed) redirect(`/byta/${profileId}?reported=rate_limited`)
+
   const { error } = await supabase.from('exchange_reports').insert({
     profile_id: profileId,
     reporter_user_id: user.id,

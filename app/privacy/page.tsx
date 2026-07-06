@@ -1,11 +1,12 @@
 import { LegalPage } from '@/components/ui/LegalPage'
+import { getLegalDocument } from '@/lib/legal/versions'
 
 export default function PrivacyPage() {
   return (
     <LegalPage
       title="Integritetspolicy"
       description="Här beskriver Bovaro hur personuppgifter behandlas för konto, bostadssökning, annonser, ansökningar, köpoäng, support och säkerhet."
-      updatedAt="2026-05-09"
+      updatedAt={getLegalDocument('privacy').version}
       sections={[
         {
           title: 'Syfte',
