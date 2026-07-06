@@ -1045,6 +1045,186 @@ export type Database = {
           },
         ]
       }
+      external_queue_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          membership_id: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          membership_id: string
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          membership_id?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_queue_events_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "external_queue_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_queue_memberships: {
+        Row: {
+          city: string | null
+          created_at: string
+          current_days: number | null
+          current_points: number | null
+          custom_provider_name: string | null
+          id: string
+          joined_date: string | null
+          last_updated_date: string | null
+          login_url: string | null
+          note: string | null
+          provider_id: string | null
+          renewal_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          current_days?: number | null
+          current_points?: number | null
+          custom_provider_name?: string | null
+          id?: string
+          joined_date?: string | null
+          last_updated_date?: string | null
+          login_url?: string | null
+          note?: string | null
+          provider_id?: string | null
+          renewal_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          current_days?: number | null
+          current_points?: number | null
+          custom_provider_name?: string | null
+          id?: string
+          joined_date?: string | null
+          last_updated_date?: string | null
+          login_url?: string | null
+          note?: string | null
+          provider_id?: string | null
+          renewal_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_queue_memberships_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "external_queue_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      external_queue_providers: {
+        Row: {
+          annual_fee_sek: number | null
+          city: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          login_url: string | null
+          name: string
+          notes: string | null
+          region: string | null
+          renewal_rule: string | null
+          signup_url: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          annual_fee_sek?: number | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          login_url?: string | null
+          name: string
+          notes?: string | null
+          region?: string | null
+          renewal_rule?: string | null
+          signup_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          annual_fee_sek?: number | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          login_url?: string | null
+          name?: string
+          notes?: string | null
+          region?: string | null
+          renewal_rule?: string | null
+          signup_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      external_queue_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          membership_id: string
+          remind_at: string
+          reminder_type: string
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          membership_id: string
+          remind_at: string
+          reminder_type: string
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          membership_id?: string
+          remind_at?: string
+          reminder_type?: string
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_queue_reminders_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "external_queue_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string

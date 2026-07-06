@@ -25,6 +25,7 @@ const navItems = [
   { href: '/dashboard/applications', label: 'Ansökningar', icon: FileText },
   { href: '/dashboard/messages', label: 'Meddelanden', icon: MessageSquare },
   { href: '/dashboard/byten', label: 'Byten', icon: ArrowLeftRight },
+  { href: '/dashboard/koer', label: 'Alla mina köer', icon: SearchCheck },
   { href: '/dashboard/favorites', label: 'Favoriter', icon: Heart },
   { href: '/dashboard/saved-searches', label: 'Sparade sökningar', icon: SearchCheck },
   { href: '/dashboard/listings', label: 'Mina objekt', icon: Building2 },
