@@ -746,6 +746,39 @@ export type Database = {
           },
         ]
       }
+      cron_run_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          result: Json | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          result?: Json | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       document_access_logs: {
         Row: {
           access_type: string
@@ -828,6 +861,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_events: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          provider: string | null
+          provider_message_id: string | null
+          skip_reason: string | null
+          status: string
+          subject: string
+          template_key: string
+          to_email: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          skip_reason?: string | null
+          status: string
+          subject: string
+          template_key: string
+          to_email: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          skip_reason?: string | null
+          status?: string
+          subject?: string
+          template_key?: string
+          to_email?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       exchange_interests: {
         Row: {
@@ -2268,27 +2343,69 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          email_applications: boolean
+          email_byta: boolean
+          email_marketing: boolean
+          email_messages: boolean
+          email_queue: boolean
+          email_saved_searches: boolean
+          updated_at: string
+          user_id: string
+          weekly_digest: boolean
+        }
+        Insert: {
+          email_applications?: boolean
+          email_byta?: boolean
+          email_marketing?: boolean
+          email_messages?: boolean
+          email_queue?: boolean
+          email_saved_searches?: boolean
+          updated_at?: string
+          user_id: string
+          weekly_digest?: boolean
+        }
+        Update: {
+          email_applications?: boolean
+          email_byta?: boolean
+          email_marketing?: boolean
+          email_messages?: boolean
+          email_queue?: boolean
+          email_saved_searches?: boolean
+          updated_at?: string
+          user_id?: string
+          weekly_digest?: boolean
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
+          category: string
           created_at: string
           id: string
+          link: string | null
           read_at: string | null
           title: string
           user_id: string
         }
         Insert: {
           body?: string | null
+          category?: string
           created_at?: string
           id?: string
+          link?: string | null
           read_at?: string | null
           title: string
           user_id: string
         }
         Update: {
           body?: string | null
+          category?: string
           created_at?: string
           id?: string
+          link?: string | null
           read_at?: string | null
           title?: string
           user_id?: string

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { getDashboardProfile } from '@/lib/data/profile'
 import { createPrivacyRequestAction, updateNotificationSettingsAction, updatePasswordAction } from '@/app/dashboard/profile/actions'
+import { updateNotificationPreferencesAction } from '@/app/dashboard/notifications/actions'
+import { getAuthContext } from '@/lib/auth/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +16,13 @@ export default async function DashboardSettingsPage() {
   if (!result.isSignedIn || !result.profile) redirect('/login')
 
   const { profile } = result
+
+  const { supabase, user } = await getAuthContext({ loginRedirect: '/login?next=/dashboard/settings' })
+  const { data: emailPreferences } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   return (
     <DashboardShell
@@ -56,6 +65,30 @@ export default async function DashboardSettingsPage() {
               Jag vill få relevanta bostadstips och nyheter via e-post
             </label>
             <Button>Spara inställningar</Button>
+          </form>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-2xl font-semibold text-[#111827]">E-postnotiser</h2>
+          <p className="mt-2 text-sm leading-6 text-[#6b7280]">
+            Välj vilka händelser som ska skickas till din e-post. Notiser i plattformen påverkas inte.
+          </p>
+          <form action={updateNotificationPreferencesAction} className="mt-6 space-y-3">
+            {[
+              ['emailApplications', 'Ansökningar och statusändringar', emailPreferences?.email_applications ?? true],
+              ['emailMessages', 'Olästa meddelanden', emailPreferences?.email_messages ?? true],
+              ['emailQueue', 'Köpåminnelser (även externa köer)', emailPreferences?.email_queue ?? true],
+              ['emailSavedSearches', 'Bevakningsträffar', emailPreferences?.email_saved_searches ?? true],
+              ['emailByta', 'Bytesmatchningar', emailPreferences?.email_byta ?? true],
+              ['weeklyDigest', 'Veckosammanfattning', emailPreferences?.weekly_digest ?? true],
+              ['emailMarketing', 'Bostadstips och produktnyheter', emailPreferences?.email_marketing ?? false],
+            ].map(([name, label, checked]) => (
+              <label key={String(name)} className="flex items-center gap-3 rounded-2xl border border-[#e8ebf3] px-4 py-3 text-sm font-medium text-[#111827]">
+                <input type="checkbox" name={String(name)} defaultChecked={Boolean(checked)} />
+                {String(label)}
+              </label>
+            ))}
+            <Button variant="secondary">Spara e-postnotiser</Button>
           </form>
         </Card>
 
