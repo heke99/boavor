@@ -36,6 +36,8 @@ const navItems = [
   { href: '/admin/billing', label: 'Fakturering', icon: Wallet },
   { href: '/admin/analytics', label: 'Analys', icon: BarChart3 },
   { href: '/admin/campaigns', label: 'Kampanjer', icon: Megaphone },
+  { href: '/admin/support-desk', label: 'Ärenden', icon: Inbox },
+  { href: '/admin/help-articles', label: 'Hjälpcenter', icon: FileText },
   { href: '/admin/support', label: 'Supportläge', icon: Eye },
   { href: '/admin/risk', label: 'Riskflaggor', icon: ShieldAlert },
   { href: '/admin/privacy', label: 'GDPR', icon: FileText },

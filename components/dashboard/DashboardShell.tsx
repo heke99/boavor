@@ -7,6 +7,7 @@ import {
   Heart,
   Inbox,
   LayoutDashboard,
+  LifeBuoy,
   MessageSquare,
   SearchCheck,
   Settings,
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/dashboard/policies', label: 'Policyer', icon: ShieldCheck },
   { href: '/dashboard/inquiries', label: 'Leads', icon: Inbox },
   { href: '/dashboard/billing', label: 'Fakturering', icon: WalletCards },
+  { href: '/dashboard/support', label: 'Support', icon: LifeBuoy },
   { href: '/dashboard/settings', label: 'Inställningar', icon: Settings },
 ]
 
