@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Settings,
   ShieldCheck,
+  Upload,
   Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/landlord/messages', label: 'Meddelanden', icon: MessageSquare },
   { href: '/landlord/viewings', label: 'Visningar', icon: CalendarClock },
   { href: '/landlord/analytics', label: 'Analys', icon: BarChart3 },
+  { href: '/landlord/import', label: 'Importcenter', icon: Upload },
   { href: '/landlord/billing', label: 'Fakturering', icon: Wallet },
   { href: '/landlord/settings', label: 'Inställningar', icon: Settings },
 ]

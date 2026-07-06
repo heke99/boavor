@@ -24,6 +24,40 @@ test.describe('Hyresvärdsarbetsytan', () => {
     await expect(page.getByText('Sidvisningar', { exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: /Exportera CSV/i })).toBeVisible()
   })
+
+  test('importcentret klarar hela cykeln: testkörning, import och återställning', async ({ page }) => {
+    await signIn(page, landlord!)
+    await page.goto('/landlord/import')
+
+    const projectName = `E2E-import ${Date.now()}`
+    await page.getByPlaceholder('T.ex. Flytt från Vitec 2026').fill(projectName)
+    await page
+      .locator('textarea[name="csv"]')
+      .fill('Fastighet;Adress;Stad;Lägenhetsnummer;Rum;Kvm;Hyra\nE2E Björken;Storgatan 1;Umeå;9001;2;55;8500\nE2E Björken;Storgatan 1;Umeå;9002;3;72;10200')
+    await page.getByRole('button', { name: 'Skapa projekt' }).click()
+    await expect(page).toHaveURL(/\/landlord\/import\//)
+
+    await page.getByRole('button', { name: 'Kör testimport' }).click()
+    await expect(page.getByText('Testkörningen är klar')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Importera på riktigt' }).click()
+    await expect(page.getByText('Importen är klar')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Återställ importen' }).click()
+    await expect(page.getByText('Importen har återställts')).toBeVisible()
+  })
+
+  test('importcentret avvisar filer med hyresgästuppgifter (integritetsspärr)', async ({ page }) => {
+    await signIn(page, landlord!)
+    await page.goto('/landlord/import')
+
+    await page.getByPlaceholder('T.ex. Flytt från Vitec 2026').fill('E2E PII-test')
+    await page
+      .locator('textarea[name="csv"]')
+      .fill('Fastighet;Lägenhetsnummer;Hyresgäst namn;Personnummer\nA;1;Anna;19900101-1234')
+    await page.getByRole('button', { name: 'Skapa projekt' }).click()
+    await expect(page.getByText(/personuppgifter om hyresgäster/)).toBeVisible()
+  })
 })
 
 test.describe('Adminpanelen', () => {

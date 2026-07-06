@@ -2440,6 +2440,157 @@ export type Database = {
           },
         ]
       }
+      migration_items: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          error: string | null
+          id: string
+          project_id: string
+          row_number: number
+          run_id: string | null
+          source_row: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          error?: string | null
+          id?: string
+          project_id: string
+          row_number: number
+          run_id?: string | null
+          source_row?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          error?: string | null
+          id?: string
+          project_id?: string
+          row_number?: number
+          run_id?: string | null
+          source_row?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "migration_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "migration_items_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "migration_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_projects: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          headers: Json
+          id: string
+          mapping: Json
+          name: string
+          owner_user_id: string | null
+          raw_csv: string
+          source_label: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          headers?: Json
+          id?: string
+          mapping?: Json
+          name: string
+          owner_user_id?: string | null
+          raw_csv: string
+          source_label?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          headers?: Json
+          id?: string
+          mapping?: Json
+          name?: string
+          owner_user_id?: string | null
+          raw_csv?: string
+          source_label?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      migration_runs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error: string | null
+          finished_at: string | null
+          id: string
+          project_id: string
+          run_type: string
+          stats: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          project_id: string
+          run_type: string
+          stats?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          project_id?: string
+          run_type?: string
+          stats?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "migration_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "migration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           email_applications: boolean
@@ -4208,6 +4359,10 @@ export type Database = {
       current_user_is_super_admin: { Args: never; Returns: boolean }
       current_user_is_thread_participant: {
         Args: { target_thread_id: string }
+        Returns: boolean
+      }
+      current_user_owns_migration_project: {
+        Args: { target_project_id: string }
         Returns: boolean
       }
       current_user_role: {
