@@ -65,10 +65,12 @@ async function uploadListingImages(
   )
 
   const urls: string[] = []
+  let rejectedCount = 0
   for (const uploadedFile of uploadedFiles.slice(0, 8)) {
     const validationError = validateListingImage(uploadedFile)
     if (validationError) {
       console.error('Invalid listing image upload', validationError)
+      rejectedCount += 1
       continue
     }
 
@@ -81,13 +83,14 @@ async function uploadListingImages(
 
     if (error) {
       console.error('Failed to upload listing image', error)
+      rejectedCount += 1
       continue
     }
 
     urls.push(supabase.storage.from(LISTING_IMAGES_BUCKET).getPublicUrl(storagePath).data.publicUrl)
   }
 
-  return urls
+  return { urls, rejectedCount }
 }
 
 export async function createListingAction(formData: FormData) {
@@ -117,7 +120,7 @@ export async function createListingAction(formData: FormData) {
   const rooms = listingSegment === 'residential' ? getNullableNumber(formData, 'rooms') : null
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const availableFrom = getNullableString(formData, 'availableFrom')
-  const uploadedImageUrls = await uploadListingImages(supabase, user.id, formData)
+  const { urls: uploadedImageUrls, rejectedCount: rejectedImageCount } = await uploadListingImages(supabase, user.id, formData)
   const imageUrl = uploadedImageUrls[0] ?? getNullableString(formData, 'imageUrl')
   const minLeaseMonths = listingSegment !== 'residential' ? getNullableNumber(formData, 'minLeaseMonths') : null
   const monthlyServiceFee = listingSegment !== 'residential' ? getNullableNumber(formData, 'monthlyServiceFee') : null
@@ -226,6 +229,12 @@ export async function createListingAction(formData: FormData) {
 
   revalidatePath('/dashboard/listings')
   revalidatePath('/listings')
+
+  // Surface rejected image uploads (wrong type/too large/storage error)
+  // instead of silently dropping them.
+  if (rejectedImageCount > 0) {
+    redirect(`/dashboard/listings?imageWarning=${rejectedImageCount}`)
+  }
 }
 
 export async function updateApplicationStatusAction(formData: FormData) {
@@ -630,7 +639,7 @@ export async function updateListingDetailsAction(formData: FormData) {
   const areaSqm = getNullableNumber(formData, 'areaSqm')
   const featuresRaw = String(formData.get('features') ?? '').trim()
   const features = Array.from(new Set(featuresRaw ? featuresRaw.split(',').map((item) => item.trim()).filter(Boolean) : []))
-  const uploadedImageUrls = await uploadListingImages(supabase, user.id, formData)
+  const { urls: uploadedImageUrls } = await uploadListingImages(supabase, user.id, formData)
   const imageUrl = uploadedImageUrls[0] ?? getNullableString(formData, 'imageUrl')
   const pricePerSqm = areaSqm && price ? Math.round(price / areaSqm) : null
 

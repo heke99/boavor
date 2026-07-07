@@ -11,6 +11,18 @@ describe('storage helpers', () => {
     expect(parseStorageUri(uri)).toEqual({ bucket: 'profile-documents', path: 'user/file.pdf' })
   })
 
+  it('rejects unknown buckets and traversal paths', () => {
+    expect(parseStorageUri('storage:evil-bucket/user/file.pdf')).toBeNull()
+    expect(parseStorageUri('storage:profile-documents/../secrets.pdf')).toBeNull()
+    expect(parseStorageUri('storage:profile-documents//absolute.pdf')).toBeNull()
+    expect(parseStorageUri('storage:profile-documents/a/../b.pdf')).toBeNull()
+    expect(parseStorageUri('storage:message-attachments/user/file.pdf', { allowedBuckets: ['profile-documents'] })).toBeNull()
+    expect(parseStorageUri('storage:profile-documents/user/file.pdf', { allowedBuckets: ['profile-documents'] })).toEqual({
+      bucket: 'profile-documents',
+      path: 'user/file.pdf',
+    })
+  })
+
   it('validates listing image mime and size', () => {
     const file = new File(['x'], 'cover.png', { type: 'image/png' })
     expect(validateListingImage(file)).toBeNull()

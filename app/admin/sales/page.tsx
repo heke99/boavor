@@ -32,8 +32,11 @@ export default async function AdminSalesPage() {
 
   const byStatus = new Map<string, NonNullable<typeof leads>>()
   for (const column of STATUS_COLUMNS) byStatus.set(column.value, [])
+  const otherLeads: NonNullable<typeof leads> = []
   for (const lead of leads ?? []) {
-    byStatus.get(lead.status)?.push(lead)
+    const bucket = byStatus.get(lead.status)
+    if (bucket) bucket.push(lead)
+    else otherLeads.push(lead)
   }
 
   return (
@@ -124,6 +127,44 @@ export default async function AdminSalesPage() {
           )
         })}
       </div>
+
+      {otherLeads.length ? (
+        <Card className="p-4">
+          <h2 className="px-1 text-sm font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
+            Okänd status ({otherLeads.length})
+          </h2>
+          <p className="mt-1 px-1 text-xs text-[#9ca3af]">
+            Dessa leads har en status som inte känns igen av tavlan. Uppdatera status för att sortera in dem.
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {otherLeads.map((lead) => (
+              <div key={lead.id} className="rounded-2xl border border-[#e8ebf3] p-3">
+                <div className="font-semibold text-[#111827]">{lead.company_name}</div>
+                <div className="mt-1 text-xs text-[#6b7280]">
+                  {lead.contact_name} · {lead.email} · status: {lead.status}
+                </div>
+                <form action={updateSalesLeadAction} className="mt-3 flex gap-2">
+                  <input type="hidden" name="leadId" value={lead.id} />
+                  <select
+                    name="status"
+                    defaultValue="new"
+                    className="w-full rounded-xl border border-[#e5e7eb] bg-white px-2 py-1.5 text-xs text-[#111827]"
+                  >
+                    {STATUS_COLUMNS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" variant="ghost" className="h-8 shrink-0 px-3 text-xs">
+                    Spara
+                  </Button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
     </AdminShell>
   )
 }

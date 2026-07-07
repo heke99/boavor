@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { UsersRound } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -17,7 +17,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export default async function CoApplicantInvitePage({ params, searchParams }: Props) {
   const [{ token }, sp] = await Promise.all([params, searchParams])
 
-  if (!UUID_PATTERN.test(token)) redirect('/')
+  if (!UUID_PATTERN.test(token)) notFound()
 
   const supabase = await createSupabaseServerClient()
   if (!supabase) redirect('/')

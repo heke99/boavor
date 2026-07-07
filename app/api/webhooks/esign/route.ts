@@ -10,9 +10,13 @@ export const dynamic = 'force-dynamic'
  *
  * Payload: { provider_ref: string, event: 'completed' | 'declined',
  *            signed_pdf_url?: string }
- * Signature: HMAC-SHA256 of the raw body with ESIGN_WEBHOOK_SECRET in the
- * `x-esign-signature` header (hex).
+ * Signature: HMAC-SHA256 of `<timestamp>.<raw body>` with
+ * ESIGN_WEBHOOK_SECRET in the `x-esign-signature` header (hex), plus the
+ * Unix timestamp (seconds) in `x-esign-timestamp`. Events older than five
+ * minutes are rejected to block replay attacks.
  */
+const MAX_WEBHOOK_AGE_SECONDS = 5 * 60
+
 export async function POST(request: NextRequest) {
   const secret = process.env.ESIGN_WEBHOOK_SECRET
   if (!secret) {
@@ -21,7 +25,17 @@ export async function POST(request: NextRequest) {
 
   const rawBody = await request.text()
   const signature = request.headers.get('x-esign-signature') ?? ''
-  const expected = createHmac('sha256', secret).update(rawBody).digest('hex')
+  const timestampHeader = request.headers.get('x-esign-timestamp') ?? ''
+
+  const timestamp = Number(timestampHeader)
+  if (!timestampHeader || !Number.isFinite(timestamp)) {
+    return NextResponse.json({ ok: false, error: 'x-esign-timestamp krävs.' }, { status: 400 })
+  }
+  if (Math.abs(Date.now() / 1000 - timestamp) > MAX_WEBHOOK_AGE_SECONDS) {
+    return NextResponse.json({ ok: false, error: 'Händelsen är för gammal (replay-skydd).' }, { status: 401 })
+  }
+
+  const expected = createHmac('sha256', secret).update(`${timestampHeader}.${rawBody}`).digest('hex')
 
   const signatureBuffer = Buffer.from(signature, 'hex')
   const expectedBuffer = Buffer.from(expected, 'hex')

@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getAuthContext } from '@/lib/auth/permissions'
 import type {
@@ -123,7 +123,9 @@ export async function requireSignedInUser() {
 export async function getApplyPageData(slug: string) {
   const { user } = await requireSignedInUser()
   const listing = await getListingBySlug(slug)
-  if (!listing || listing.listingType !== 'rent' || listing.listingSegment !== 'residential') redirect(`/listing/${slug}`)
+  // Unknown listing → 404 directly instead of bouncing via the listing page.
+  if (!listing) notFound()
+  if (listing.listingType !== 'rent' || listing.listingSegment !== 'residential') redirect(`/listing/${slug}`)
 
   const { isSignedIn, profile } = await getDashboardProfile()
   if (!isSignedIn || !profile) redirect('/login')

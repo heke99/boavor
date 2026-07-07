@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           metadata: Json
+          resource_key: string | null
           target_id: string | null
           target_type: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json
+          resource_key?: string | null
           target_id?: string | null
           target_type: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json
+          resource_key?: string | null
           target_id?: string | null
           target_type?: string
         }
@@ -4837,7 +4840,7 @@ export type Database = {
         Returns: Json
       }
       admin_user_overview: {
-        Args: never
+        Args: { p_limit?: number | null }
         Returns: {
           account_type: string
           city: string

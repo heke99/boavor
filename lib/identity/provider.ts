@@ -95,8 +95,18 @@ export async function resolveIdentityProvider(
 /**
  * HMAC hash of a normalized personal identity number. The raw number is never
  * stored; this hash supports duplicate-identity detection and re-verification.
+ *
+ * In production a real secret is required — a well-known fallback pepper
+ * would make the hashes brute-forceable offline.
  */
 export function hashPersonalIdentityNumber(normalized: string, env: NodeJS.ProcessEnv = process.env) {
-  const secret = env.IDENTITY_HASH_SECRET || env.RATE_LIMIT_SECRET || 'bovaro-development-identity'
+  const secret = env.IDENTITY_HASH_SECRET || env.RATE_LIMIT_SECRET
+  if (!secret) {
+    if (env.NODE_ENV === 'production') {
+      throw new Error('IDENTITY_HASH_SECRET (or RATE_LIMIT_SECRET) must be set in production.')
+    }
+    console.warn('IDENTITY_HASH_SECRET is not set; using an insecure development fallback.')
+    return createHmac('sha256', 'bovaro-development-identity').update(normalized).digest('hex')
+  }
   return createHmac('sha256', secret).update(normalized).digest('hex')
 }

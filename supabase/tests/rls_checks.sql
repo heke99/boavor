@@ -129,4 +129,73 @@ begin
 end;
 $$;
 
+-- ============================================================================
+-- Production hardening checks (20260707000000_production_hardening.sql)
+-- ============================================================================
+
+do $$
+declare
+  v_seeker uuid;
+  v_listing uuid := '88888888-8888-4888-8888-888888888888';
+  v_application uuid;
+  v_synced uuid;
+begin
+  select id into v_seeker from public.profiles where role = 'seeker' limit 1;
+  if v_seeker is null then
+    raise exception 'Hardening checks need one seeker user in profiles';
+  end if;
+
+  -- --------------------------------------------------------------------------
+  -- 6. profiles_role_guard: a user cannot escalate their own role to admin
+  -- --------------------------------------------------------------------------
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_seeker, 'role', 'authenticated')::text, true);
+  begin
+    update public.profiles set role = 'admin' where id = v_seeker;
+    raise exception 'FAIL: user escalated own role to admin';
+  exception
+    when insufficient_privilege then null;
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+
+  -- --------------------------------------------------------------------------
+  -- 7. rental_applications trigger keeps user_id/applicant_user_id in sync
+  -- --------------------------------------------------------------------------
+  insert into public.listings (id, created_by, title, slug, listing_type, property_type, city)
+  values (v_listing, v_seeker, 'RLS-check listing', 'rls-check-' || extract(epoch from now())::bigint, 'rent', 'apartment', 'Teststad');
+
+  insert into public.rental_applications (listing_id, user_id, status)
+  values (v_listing, v_seeker, 'submitted')
+  returning id into v_application;
+
+  select applicant_user_id into v_synced from public.rental_applications where id = v_application;
+  if v_synced is distinct from v_seeker then
+    raise exception 'FAIL: applicant_user_id was not synced from user_id';
+  end if;
+
+  -- --------------------------------------------------------------------------
+  -- 8. Duplicate active applications per (listing, user) are blocked
+  -- --------------------------------------------------------------------------
+  begin
+    insert into public.rental_applications (listing_id, user_id, status)
+    values (v_listing, v_seeker, 'submitted');
+    raise exception 'FAIL: duplicate active application was allowed';
+  exception
+    when unique_violation then null;
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+  end;
+
+  -- Withdrawn rows must not block a re-apply.
+  update public.rental_applications set status = 'withdrawn' where id = v_application;
+  insert into public.rental_applications (listing_id, user_id, status)
+  values (v_listing, v_seeker, 'submitted');
+
+  raise notice 'ALL HARDENING CHECKS PASSED';
+end;
+$$;
+
 rollback;

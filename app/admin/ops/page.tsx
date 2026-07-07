@@ -33,7 +33,17 @@ function formatDateTime(value: string | null) {
 const inputClass =
   'w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#5b3df5]'
 
-export default async function AdminOpsPage() {
+const errorMessages: Record<string, string> = {
+  super_admin_required: 'Endast superadmin kan ändra underhållsläget.',
+}
+
+export default async function AdminOpsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const errorKey = typeof params.error === 'string' ? params.error : null
   const { supabase, role } = await requireAdminUser()
 
   const [maintenance, { data: cronRuns }, { data: failures }, { data: deadDeliveries }, { data: incidents }] =
@@ -72,6 +82,11 @@ export default async function AdminOpsPage() {
       title="Drift (ops)"
       description="Cron-körningar, integrationsfel, döda webhooks, incidenter och underhållsläge. Runbook: docs/ops/runbook.md."
     >
+      {errorKey && errorMessages[errorKey] ? (
+        <Card className="border border-[#fecaca] bg-[#fef2f2] p-5 text-sm font-semibold text-[#b91c1c]">
+          {errorMessages[errorKey]}
+        </Card>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-5">
           <div className="text-sm font-semibold text-[#6b7280]">Misslyckade cron (senaste 40)</div>

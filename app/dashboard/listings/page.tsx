@@ -35,7 +35,13 @@ const listingStatusOptions = [
   { value: 'archived', label: 'Arkiverad' },
 ]
 
-export default async function DashboardListingsPage() {
+export default async function DashboardListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const imageWarningCount = Number(typeof params.imageWarning === 'string' ? params.imageWarning : 0) || 0
   const { profile, listings, incomingApplications, incomingInquiries } = await getOwnerDashboardData()
   const canManage = ['seeker', 'landlord', 'broker', 'company_admin', 'admin', 'super_admin'].includes(profile.role)
   const totalLeads = incomingApplications.length + incomingInquiries.length
@@ -43,6 +49,13 @@ export default async function DashboardListingsPage() {
 
   return (
     <DashboardShell activePath="/dashboard/listings" title="Mina objekt" description="Skapa och hantera bostäder, lokaler, kontor, parkeringar, förråd, mark och fastighetsobjekt i ett kommersiellt arbetsflöde.">
+      {imageWarningCount > 0 ? (
+        <Card className="border border-[#fde68a] bg-[#fffbeb] p-5 text-sm font-semibold text-[#92400e]">
+          Objektet sparades, men {imageWarningCount === 1 ? 'en bild' : `${imageWarningCount} bilder`} kunde inte laddas
+          upp (fel format eller för stor — max 10 MB, jpg/png/webp/gif). Ladda upp {imageWarningCount === 1 ? 'den' : 'dem'} igen
+          via objektets redigeringssida.
+        </Card>
+      ) : null}
       {!canManage ? (
         <Card className="p-8">
           <h2 className="text-2xl font-semibold">Annonsörsportal låst</h2>

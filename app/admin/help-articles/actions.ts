@@ -33,20 +33,31 @@ export async function saveHelpArticleAction(formData: FormData) {
     updated_by: user.id,
   }
 
-  const { error } = articleId
-    ? await supabase.from('help_articles').update(payload).eq('id', articleId)
-    : await supabase.from('help_articles').insert({ ...payload, created_by: user.id })
-
-  if (error) {
-    console.error('Failed to save help article', error)
-    redirect(`/admin/help-articles?error=${error.code === '23505' ? 'slug_taken' : 'failed'}`)
+  let savedArticleId = articleId
+  if (articleId) {
+    const { error } = await supabase.from('help_articles').update(payload).eq('id', articleId)
+    if (error) {
+      console.error('Failed to save help article', error)
+      redirect(`/admin/help-articles?error=${error.code === '23505' ? 'slug_taken' : 'failed'}`)
+    }
+  } else {
+    const { data: created, error } = await supabase
+      .from('help_articles')
+      .insert({ ...payload, created_by: user.id })
+      .select('id')
+      .maybeSingle()
+    if (error) {
+      console.error('Failed to save help article', error)
+      redirect(`/admin/help-articles?error=${error.code === '23505' ? 'slug_taken' : 'failed'}`)
+    }
+    savedArticleId = created?.id ?? null
   }
 
   await logAdminAudit(supabase, {
     adminUserId: user.id,
     action: articleId ? 'help_article_updated' : 'help_article_created',
     targetType: 'help_article',
-    targetId: articleId,
+    targetId: savedArticleId,
     metadata: { slug, is_published: isPublished },
   })
 

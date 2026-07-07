@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { parseStorageUri } from '@/lib/storage'
+import { MESSAGE_ATTACHMENTS_BUCKET, parseStorageUri } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   if (!attachment) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const storageRef = parseStorageUri(attachment.file_url)
+  const storageRef = parseStorageUri(attachment.file_url, { allowedBuckets: [MESSAGE_ATTACHMENTS_BUCKET] })
   if (!storageRef) return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 })
 
   const { data: signed, error } = await supabase.storage

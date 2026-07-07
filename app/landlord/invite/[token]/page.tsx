@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Building2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -24,7 +24,7 @@ type Props = {
 
 export default async function CompanyInvitePage({ params, searchParams }: Props) {
   const [{ token }, sp] = await Promise.all([params, searchParams])
-  if (!UUID_PATTERN.test(token)) redirect('/')
+  if (!UUID_PATTERN.test(token)) notFound()
 
   const supabase = await createSupabaseServerClient()
   if (!supabase) redirect('/')

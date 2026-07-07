@@ -83,10 +83,12 @@ export async function submitRentalApplication(formData: FormData) {
     redirect(`/listing/${slug}/apply?error=deadline_passed`)
   }
 
+  // Covers both the canonical user_id column and legacy rows that only have
+  // applicant_user_id populated.
   const { data: existingApplication } = await supabase
     .from('rental_applications')
     .select('id')
-    .eq('user_id', user.id)
+    .or(`user_id.eq.${user.id},applicant_user_id.eq.${user.id}`)
     .eq('listing_id', owner.id)
     .neq('status', 'withdrawn')
     .limit(1)
@@ -114,6 +116,9 @@ export async function submitRentalApplication(formData: FormData) {
     .from('rental_applications')
     .insert({
       user_id: user.id,
+      // Kept in sync with user_id (also enforced by a DB trigger); the unique
+      // index and legacy RLS reference this column.
+      applicant_user_id: user.id,
       listing_id: owner.id,
       landlord_user_id: owner.created_by ?? null,
       landlord_company_id: owner.company_id ?? null,

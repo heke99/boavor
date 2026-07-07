@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     if (error) throw new Error(error.message)
 
     let sent = 0
+    let failed = 0
 
     for (const reminder of dueReminders ?? []) {
       const { data: membership } = await supabase
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
       const title = REMINDER_TITLES[reminder.reminder_type] ?? 'Köpåminnelse'
 
-      await supabase.from('notifications').insert({
+      const { error: notificationError } = await supabase.from('notifications').insert({
         user_id: reminder.user_id,
         title,
         body: `${queueName}${membership?.renewal_date ? ` — förnyelse ${membership.renewal_date}` : ''}. Uppdatera dina uppgifter under Alla mina köer.`,
@@ -50,9 +51,10 @@ export async function POST(request: NextRequest) {
         link: '/dashboard/koer',
       })
 
+      let emailStatus: 'sent' | 'skipped' | 'failed' | 'no_email' = 'no_email'
       const { data: userInfo } = await supabase.auth.admin.getUserById(reminder.user_id)
       if (userInfo?.user?.email) {
-        await sendTemplatedEmail(supabase, {
+        const result = await sendTemplatedEmail(supabase, {
           userId: reminder.user_id,
           to: userInfo.user.email,
           templateKey: 'external_queue_reminder',
@@ -63,6 +65,18 @@ export async function POST(request: NextRequest) {
             manageUrl: `${siteUrl}/dashboard/koer`,
           },
         })
+        emailStatus = result.status
+      }
+
+      // Mark sent only when the user was reached on at least one channel.
+      // If both the in-app notification and the email failed, the row keeps
+      // sent_at = null so the next run retries it. Email-only failures are
+      // already surfaced via email_events/integration_failures; retrying them
+      // here would duplicate the in-app notification.
+      const delivered = !notificationError || emailStatus === 'sent' || emailStatus === 'skipped'
+      if (!delivered) {
+        failed += 1
+        continue
       }
 
       await supabase
@@ -73,7 +87,7 @@ export async function POST(request: NextRequest) {
       sent += 1
     }
 
-    return { sent }
+    return { sent, failed }
   })
 }
 

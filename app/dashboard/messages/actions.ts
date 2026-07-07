@@ -12,6 +12,7 @@ import {
   validateMessageAttachment,
 } from '@/lib/storage'
 import { scanForVirus } from '@/lib/messaging/attachment-scan'
+import { getSafeNextPath } from '@/lib/url'
 
 /** Landlord starts (or reuses) the thread for an application. */
 export async function startApplicationThreadAction(formData: FormData) {
@@ -42,7 +43,7 @@ export async function sendMessageAction(formData: FormData) {
 
   const threadId = String(formData.get('threadId') ?? '')
   const body = String(formData.get('body') ?? '').trim()
-  const backTo = String(formData.get('backTo') ?? '/dashboard/messages')
+  const backTo = getSafeNextPath(String(formData.get('backTo') ?? ''), '/dashboard/messages')
   if (!threadId || !body) return
 
   const allowed = await checkRateLimit(supabase, {

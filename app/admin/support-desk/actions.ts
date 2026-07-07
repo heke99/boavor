@@ -62,6 +62,14 @@ export async function staffReplyAction(formData: FormData) {
     body: 'Ditt supportärende har fått ett svar.',
   })
 
+  await logAdminAudit(supabase, {
+    adminUserId: user.id,
+    action: 'support_ticket_replied',
+    targetType: 'support_ticket',
+    targetId: ticketId,
+    metadata: { used_macro: Boolean(macroId) },
+  })
+
   revalidatePath(`/admin/support-desk/${ticketId}`)
   revalidatePath('/admin/support-desk')
 }
@@ -114,16 +122,45 @@ export async function createMacroAction(formData: FormData) {
   const body = String(formData.get('body') ?? '').trim()
   if (!title || !body) return
 
-  await supabase.from('support_macros').insert({ title, body, created_by: user.id })
+  const { data: created, error } = await supabase
+    .from('support_macros')
+    .insert({ title, body, created_by: user.id })
+    .select('id')
+    .maybeSingle()
+  if (error) {
+    console.error('Failed to create support macro', error)
+    return
+  }
+
+  await logAdminAudit(supabase, {
+    adminUserId: user.id,
+    action: 'support_macro_created',
+    targetType: 'support_macro',
+    targetId: created?.id ?? null,
+    metadata: { title },
+  })
+
   revalidatePath('/admin/support-desk')
 }
 
 export async function toggleMacroAction(formData: FormData) {
-  const { supabase } = await requireAdminUser()
+  const { supabase, user } = await requireAdminUser()
   const macroId = String(formData.get('macroId') ?? '')
   const nextActive = String(formData.get('nextActive') ?? 'false') === 'true'
   if (!macroId) return
 
-  await supabase.from('support_macros').update({ is_active: nextActive }).eq('id', macroId)
+  const { error } = await supabase.from('support_macros').update({ is_active: nextActive }).eq('id', macroId)
+  if (error) {
+    console.error('Failed to toggle support macro', error)
+    return
+  }
+
+  await logAdminAudit(supabase, {
+    adminUserId: user.id,
+    action: nextActive ? 'support_macro_activated' : 'support_macro_deactivated',
+    targetType: 'support_macro',
+    targetId: macroId,
+  })
+
   revalidatePath('/admin/support-desk')
 }

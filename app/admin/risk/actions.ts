@@ -30,12 +30,13 @@ export async function createRiskFlagAction(formData: FormData) {
   await logAdminAudit(supabase, {
     adminUserId: user.id,
     action: 'risk_flag_created',
-    targetType: 'user',
-    targetId: userId,
-    metadata: { flag_id: data?.id ?? null, flag_type: flagType, severity },
+    targetType: 'user_risk_flag',
+    targetId: data?.id ?? null,
+    metadata: { flagged_user_id: userId, flag_type: flagType, severity },
   })
 
   revalidatePath('/admin/risk')
+  revalidatePath('/admin/identity')
 }
 
 export async function resolveRiskFlagAction(formData: FormData) {
@@ -63,10 +64,11 @@ export async function resolveRiskFlagAction(formData: FormData) {
   await logAdminAudit(supabase, {
     adminUserId: user.id,
     action: 'risk_flag_resolved',
-    targetType: 'user',
-    targetId: flag.user_id,
-    metadata: { flag_id: flagId, flag_type: flag.flag_type },
+    targetType: 'user_risk_flag',
+    targetId: flagId,
+    metadata: { flagged_user_id: flag.user_id, flag_type: flag.flag_type },
   })
 
   revalidatePath('/admin/risk')
+  revalidatePath('/admin/identity')
 }

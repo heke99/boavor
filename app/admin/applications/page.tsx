@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { getAdminApplications } from '@/lib/data/admin'
-import { formatCurrency } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 

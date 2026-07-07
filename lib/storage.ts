@@ -53,14 +53,24 @@ export function validateMessageAttachment(file: File) {
   return null
 }
 
-export function parseStorageUri(value: string | null | undefined) {
+const KNOWN_BUCKETS = new Set([PROFILE_DOCUMENTS_BUCKET, MESSAGE_ATTACHMENTS_BUCKET, LISTING_IMAGES_BUCKET])
+
+export function parseStorageUri(value: string | null | undefined, options: { allowedBuckets?: readonly string[] } = {}) {
   if (!value?.startsWith('storage:')) return null
   const withoutScheme = value.slice('storage:'.length)
   const separatorIndex = withoutScheme.indexOf('/')
   if (separatorIndex === -1) return null
 
-  return {
-    bucket: withoutScheme.slice(0, separatorIndex),
-    path: withoutScheme.slice(separatorIndex + 1),
-  }
+  const bucket = withoutScheme.slice(0, separatorIndex)
+  const path = withoutScheme.slice(separatorIndex + 1)
+
+  // Stored URIs are app-written, but never trust them blindly: reject
+  // traversal segments, absolute paths and unknown buckets so a tampered DB
+  // row cannot point signed-URL/delete calls at arbitrary objects.
+  if (!path || path.startsWith('/') || path.split('/').some((segment) => segment === '..' || segment === '')) return null
+
+  const allowedBuckets = options.allowedBuckets ? new Set(options.allowedBuckets) : KNOWN_BUCKETS
+  if (!allowedBuckets.has(bucket)) return null
+
+  return { bucket, path }
 }

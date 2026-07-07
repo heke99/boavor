@@ -57,7 +57,9 @@ export type RentalApplicationStatus =
   | 'reserve'
   | 'viewing'
 
-export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired' | 'trialing'
+// Mirrors the subscription_status enum in the database. Stripe-only statuses
+// (e.g. "trialing") are mapped before persisting — see lib/billing/entitlements.ts.
+export type SubscriptionStatus = 'pending' | 'active' | 'paused' | 'past_due' | 'cancelled' | 'expired'
 
 export type CompanyType =
   | 'landlord_company'

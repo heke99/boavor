@@ -11,6 +11,10 @@ import type { AccountType, AppRole, CompanyType, LegalForm, PreferredListingInte
 
 const COMPANY_ROLES: AppRole[] = ['landlord', 'broker', 'company_admin']
 
+// Roles a user may pick for themselves in the profile form. Admin roles are
+// granted exclusively through the super-admin user management action.
+const SELF_ASSIGNABLE_ROLES: AppRole[] = ['seeker', 'buyer', 'landlord', 'broker', 'company_admin']
+
 async function requireUser() {
   const supabase = await createSupabaseServerClient()
   if (!supabase) throw new Error('Supabase is not configured.')
@@ -42,7 +46,24 @@ export async function saveProfileAction(formData: FormData) {
     .map((item) => item.trim())
     .filter(Boolean)
 
-  const role = String(formData.get('role') ?? 'seeker') as AppRole
+  const requestedRole = String(formData.get('role') ?? 'seeker') as AppRole
+
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle<{ role: AppRole }>()
+  const currentRole = currentProfile?.role ?? null
+
+  // Never allow the profile form to grant or drop admin roles: admins keep
+  // their role, everyone else is limited to the self-assignable allowlist.
+  // A DB trigger (profiles_role_guard) enforces the same rule as defense in depth.
+  const role: AppRole =
+    currentRole === 'admin' || currentRole === 'super_admin'
+      ? currentRole
+      : SELF_ASSIGNABLE_ROLES.includes(requestedRole)
+        ? requestedRole
+        : (currentRole ?? 'seeker')
 
   await supabase.from('profiles').upsert({
     id: user.id,
@@ -306,7 +327,7 @@ export async function removeProfileDocumentAction(formData: FormData) {
 
   if (!document) return
 
-  const storageRef = parseStorageUri(document.file_url)
+  const storageRef = parseStorageUri(document.file_url, { allowedBuckets: [PROFILE_DOCUMENTS_BUCKET] })
   await supabase.from('profile_documents').delete().eq('id', id).eq('user_id', user.id)
   if (storageRef) {
     await supabase.storage.from(storageRef.bucket).remove([storageRef.path])

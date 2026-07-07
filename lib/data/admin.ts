@@ -116,9 +116,9 @@ export async function requireAdminUser() {
   return getAdminClient()
 }
 
-export async function getAdminUsers(params: { q?: string; accountType?: string; role?: string } = {}) {
+export async function getAdminUsers(params: { q?: string; accountType?: string; role?: string; limit?: number } = {}) {
   const { supabase } = await getAdminClient()
-  const { data, error } = await supabase.rpc('admin_user_overview')
+  const { data, error } = await supabase.rpc('admin_user_overview', { p_limit: params.limit ?? null })
 
   if (error) {
     console.error('Failed to fetch admin users', error)
@@ -159,7 +159,7 @@ export async function getAdminUsers(params: { q?: string; accountType?: string; 
   return rows
 }
 
-export async function getAdminCompanies(params: { q?: string; verificationStatus?: string } = {}): Promise<AdminCompanyRow[]> {
+export async function getAdminCompanies(params: { q?: string; verificationStatus?: string; limit?: number } = {}): Promise<AdminCompanyRow[]> {
   const { supabase } = await getAdminClient()
 
   let query = supabase
@@ -169,6 +169,7 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
 
   if (params.q) query = query.or(`name.ilike.${like(params.q)},organization_number.ilike.${like(params.q)},org_number.ilike.${like(params.q)},email.ilike.${like(params.q)}`)
   if (params.verificationStatus && params.verificationStatus !== 'all') query = query.eq('verification_status', params.verificationStatus)
+  if (params.limit) query = query.limit(params.limit)
 
   const { data, error } = await query
   if (error) {
@@ -225,7 +226,7 @@ export async function getAdminCompanies(params: { q?: string; verificationStatus
   }))
 }
 
-export async function getAdminListings(params: { q?: string; segment?: string; status?: string; ownerType?: string } = {}): Promise<AdminListingRow[]> {
+export async function getAdminListings(params: { q?: string; segment?: string; status?: string; ownerType?: string; limit?: number } = {}): Promise<AdminListingRow[]> {
   const { supabase } = await getAdminClient()
 
   let query = supabase
@@ -238,6 +239,7 @@ export async function getAdminListings(params: { q?: string; segment?: string; s
   if (params.status && params.status !== 'all') query = query.eq('status', params.status as ListingStatus)
   if (params.ownerType === 'company') query = query.not('company_id', 'is', null)
   if (params.ownerType === 'private') query = query.is('company_id', null)
+  if (params.limit) query = query.limit(params.limit)
 
   const { data, error } = await query
   if (error) {
@@ -403,55 +405,139 @@ export async function getAdminInquiries(params: { q?: string; status?: string; s
   }))
 }
 
+async function countRows(
+  supabase: Awaited<ReturnType<typeof getAdminClient>>['supabase'],
+  table: 'profiles' | 'companies' | 'listings' | 'rental_applications' | 'listing_inquiries',
+  filter?: { column: string; value: string },
+) {
+  let query = supabase.from(table).select('id', { count: 'exact', head: true })
+  if (filter) query = query.eq(filter.column, filter.value)
+  const { count, error } = await query
+  if (error) {
+    console.error(`Failed to count ${table}`, error)
+    return 0
+  }
+  return count ?? 0
+}
+
 export async function getAdminOverview(): Promise<AdminOverviewData> {
-  const [users, companies, listings, applications, inquiries] = await Promise.all([
-    getAdminUsers(),
-    getAdminCompanies(),
-    getAdminListings(),
-    getAdminApplications(),
-    getAdminInquiries(),
+  const { supabase } = await getAdminClient()
+
+  // Exact head-count queries: cheap, accurate for any dataset size, and each
+  // widget degrades independently instead of taking the dashboard down.
+  const [
+    users,
+    companyUsers,
+    companies,
+    pendingCompaniesCount,
+    listings,
+    publishedListings,
+    applications,
+    inquiries,
+    latestUsers,
+    latestListings,
+    pendingCompanies,
+  ] = await Promise.all([
+    countRows(supabase, 'profiles'),
+    countRows(supabase, 'profiles', { column: 'account_type', value: 'company' }),
+    countRows(supabase, 'companies'),
+    countRows(supabase, 'companies', { column: 'verification_status', value: 'pending' }),
+    countRows(supabase, 'listings'),
+    countRows(supabase, 'listings', { column: 'status', value: 'published' }),
+    countRows(supabase, 'rental_applications'),
+    countRows(supabase, 'listing_inquiries'),
+    getAdminUsers({ limit: 6 }),
+    getAdminListings({ limit: 6 }),
+    getAdminCompanies({ verificationStatus: 'pending', limit: 6 }),
   ])
 
   return {
     stats: {
-      users: users.length,
-      privateUsers: users.filter((user) => user.accountType === 'private').length,
-      companyUsers: users.filter((user) => user.accountType === 'company').length,
-      companies: companies.length,
-      pendingCompanies: companies.filter((company) => company.verificationStatus === 'pending').length,
-      listings: listings.length,
-      publishedListings: listings.filter((listing) => listing.status === 'published').length,
-      applications: applications.length,
-      inquiries: inquiries.length,
+      users,
+      // account_type is nullable and defaults to private in the UI, so
+      // "private" is everything that is not explicitly a company account.
+      privateUsers: Math.max(users - companyUsers, 0),
+      companyUsers,
+      companies,
+      pendingCompanies: pendingCompaniesCount,
+      listings,
+      publishedListings,
+      applications,
+      inquiries,
     },
-    latestUsers: users.slice(0, 6),
-    latestListings: listings.slice(0, 6),
-    pendingCompanies: companies.filter((company) => company.verificationStatus === 'pending').slice(0, 6),
+    latestUsers,
+    latestListings,
+    pendingCompanies,
   }
 }
 
-export async function getAdminAuditLogs(limit = 80) {
-  const { supabase } = await getAdminClient()
-  const { data, error } = await supabase
-    .from('admin_audit_logs')
-    .select('id, admin_user_id, action, target_type, target_id, metadata, created_at')
-    .order('created_at', { ascending: false })
-    .limit(limit)
+export type AdminAuditLogRow = {
+  id: string
+  admin_user_id: string | null
+  actor_name: string | null
+  action: string
+  target_type: string
+  target_id: string | null
+  resource_key: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
 
+export type AdminAuditLogFilters = {
+  action?: string
+  targetType?: string
+  from?: string
+  to?: string
+  page?: number
+  pageSize?: number
+}
+
+export async function getAdminAuditLogs(options: AdminAuditLogFilters = {}) {
+  const pageSize = Math.min(Math.max(options.pageSize ?? 30, 1), 200)
+  const page = Math.max(options.page ?? 1, 1)
+  const offset = (page - 1) * pageSize
+
+  const { supabase } = await getAdminClient()
+  let query = supabase
+    .from('admin_audit_logs')
+    .select('id, admin_user_id, action, target_type, target_id, resource_key, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + pageSize - 1)
+
+  if (options.action) query = query.ilike('action', `%${options.action}%`)
+  if (options.targetType) query = query.ilike('target_type', `%${options.targetType}%`)
+  if (options.from) query = query.gte('created_at', options.from)
+  if (options.to) query = query.lte('created_at', `${options.to}T23:59:59.999Z`)
+
+  const { data, error } = await query
   if (error) {
     console.error('Failed to fetch admin audit logs', error)
-    return []
+    return { rows: [] as AdminAuditLogRow[], page, pageSize, hasMore: false }
   }
 
-  return (data ?? []) as Array<{
-    id: string
-    admin_user_id: string | null
-    action: string
-    target_type: string
-    target_id: string | null
-    metadata: Record<string, unknown>
-    created_at: string
-  }>
+  const rows = (data ?? []) as Array<Omit<AdminAuditLogRow, 'actor_name'>>
+
+  // Resolve actor names for display; failures fall back to raw ids.
+  const actorIds = Array.from(new Set(rows.map((row) => row.admin_user_id).filter(Boolean))) as string[]
+  const { data: actors } = actorIds.length
+    ? await supabase.from('profiles').select('id, first_name, last_name').in('id', actorIds)
+    : { data: [] }
+  const actorMap = new Map(
+    ((actors ?? []) as Array<{ id: string; first_name: string | null; last_name: string | null }>).map((row) => [
+      row.id,
+      [row.first_name, row.last_name].filter(Boolean).join(' ') || null,
+    ]),
+  )
+
+  return {
+    rows: rows.map((row) => ({
+      ...row,
+      actor_name: row.admin_user_id ? (actorMap.get(row.admin_user_id) ?? null) : null,
+    })),
+    page,
+    pageSize,
+    hasMore: rows.length === pageSize,
+  }
 }
 
 export async function getAdminPrivacyRequests(limit = 80) {

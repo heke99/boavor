@@ -37,10 +37,22 @@ export async function resolveIntegrationFailureAction(formData: FormData) {
   const failureId = String(formData.get('failureId') ?? '')
   if (!failureId) return
 
-  await supabase
+  const { error } = await supabase
     .from('integration_failures')
     .update({ status: 'resolved', resolved_at: new Date().toISOString(), resolved_by: user.id })
     .eq('id', failureId)
+
+  if (error) {
+    console.error('Failed to resolve integration failure', error)
+    return
+  }
+
+  await logAdminAudit(supabase, {
+    adminUserId: user.id,
+    action: 'integration_failure_resolved',
+    targetType: 'integration_failure',
+    targetId: failureId,
+  })
 
   revalidatePath('/admin/ops')
 }

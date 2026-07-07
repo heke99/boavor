@@ -11,14 +11,30 @@ type RateLimitParams = {
   windowSeconds: number
 }
 
-function hashValue(value: string) {
-  const secret = process.env.RATE_LIMIT_SECRET ?? 'bovaro-development-rate-limit'
+function getRateLimitSecret() {
+  const secret = process.env.RATE_LIMIT_SECRET
+  if (secret) return secret
+  if (process.env.NODE_ENV === 'production') {
+    // A well-known pepper in production would make the stored hashes
+    // (emails/IPs) trivially reversible offline. Fail closed instead.
+    return null
+  }
+  return 'bovaro-development-rate-limit'
+}
+
+function hashValue(secret: string, value: string) {
   return createHash('sha256').update(`${secret}:${value}`).digest('hex')
 }
 
 export async function checkRateLimit(supabase: SupabaseServerClient, params: RateLimitParams) {
-  const subjectHash = hashValue(params.subject.toLowerCase())
-  const ipHash = params.ip ? hashValue(params.ip) : null
+  const secret = getRateLimitSecret()
+  if (!secret) {
+    console.error('RATE_LIMIT_SECRET must be set in production; denying rate-limited action.')
+    return false
+  }
+
+  const subjectHash = hashValue(secret, params.subject.toLowerCase())
+  const ipHash = params.ip ? hashValue(secret, params.ip) : null
 
   const { data, error } = await supabase.rpc('check_rate_limit', {
     input_scope: params.scope,

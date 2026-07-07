@@ -30,9 +30,30 @@ export async function POST(request: NextRequest) {
       byUser.set(match.user_id, entry)
     }
 
+    // Idempotency: a re-run (manual trigger, retried cron) must not send a
+    // second digest. Skip users already sent a digest in the last 6 days.
+    const dedupSince = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+    const userIds = Array.from(byUser.keys())
+    const { data: recentDigests } = userIds.length
+      ? await supabase
+          .from('email_events')
+          .select('user_id')
+          .eq('template_key', 'weekly_digest')
+          .eq('status', 'sent')
+          .gte('created_at', dedupSince)
+          .in('user_id', userIds)
+      : { data: [] }
+    const alreadySent = new Set((recentDigests ?? []).map((row) => row.user_id))
+
     let digestsSent = 0
+    let skippedAlreadySent = 0
 
     for (const [userId, summary] of byUser) {
+      if (alreadySent.has(userId)) {
+        skippedAlreadySent += 1
+        continue
+      }
+
       const { data: userInfo } = await supabase.auth.admin.getUserById(userId)
       const email = userInfo?.user?.email
       if (!email) continue
@@ -51,7 +72,7 @@ export async function POST(request: NextRequest) {
       if (result.status === 'sent') digestsSent += 1
     }
 
-    return { usersWithMatches: byUser.size, digestsSent }
+    return { usersWithMatches: byUser.size, digestsSent, skippedAlreadySent }
   })
 }
 

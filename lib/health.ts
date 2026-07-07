@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { hasSupabaseEnv } from '@/lib/supabase/env'
-import { LISTING_IMAGES_BUCKET, PROFILE_DOCUMENTS_BUCKET } from '@/lib/storage'
+import { LISTING_IMAGES_BUCKET, MESSAGE_ATTACHMENTS_BUCKET, PROFILE_DOCUMENTS_BUCKET } from '@/lib/storage'
 
 export type HealthCheck = {
   ok: boolean
@@ -78,6 +78,12 @@ export async function getReadinessPayload() {
 
   checks.profileDocumentsBucket = await timed(async () => {
     const { data, error } = await supabase.rpc('storage_bucket_exists', { bucket_name: PROFILE_DOCUMENTS_BUCKET })
+    if (error) throw new Error(error.message)
+    if (data !== true) throw new Error('Bucket saknas')
+  })
+
+  checks.messageAttachmentsBucket = await timed(async () => {
+    const { data, error } = await supabase.rpc('storage_bucket_exists', { bucket_name: MESSAGE_ATTACHMENTS_BUCKET })
     if (error) throw new Error(error.message)
     if (data !== true) throw new Error('Bucket saknas')
   })

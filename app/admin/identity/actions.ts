@@ -36,4 +36,5 @@ export async function resolveRiskFlagAction(formData: FormData) {
   })
 
   revalidatePath('/admin/identity')
+  revalidatePath('/admin/risk')
 }

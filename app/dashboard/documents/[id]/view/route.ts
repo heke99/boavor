@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { parseStorageUri } from '@/lib/storage'
+import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri } from '@/lib/storage'
 
 type Params = {
   params: Promise<{ id: string }>
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 })
   }
 
-  const storageRef = parseStorageUri(document.file_url)
+  const storageRef = parseStorageUri(document.file_url, { allowedBuckets: [PROFILE_DOCUMENTS_BUCKET] })
   if (!storageRef) {
     return NextResponse.redirect(document.file_url)
   }

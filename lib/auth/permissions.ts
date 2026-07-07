@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import { resolveAuditTarget } from '@/lib/auth/audit'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Json } from '@/lib/supabase/database.types'
 import type { AppRole } from '@/lib/types'
@@ -171,11 +172,21 @@ export async function logAdminAudit(
   supabase: SupabaseServerClient,
   params: { adminUserId: string; action: string; targetType: string; targetId?: string | null; metadata?: Json },
 ) {
-  await supabase.from('admin_audit_logs').insert({
+  const { error } = await supabase.from('admin_audit_logs').insert({
     admin_user_id: params.adminUserId,
     action: params.action,
     target_type: params.targetType,
-    target_id: params.targetId ?? null,
+    ...resolveAuditTarget(params.targetId),
     metadata: params.metadata ?? {},
   })
+
+  // Audit writes are best-effort by design (they must never block the
+  // primary mutation), but failures must be visible in server logs.
+  if (error) {
+    console.error('Admin audit log insert failed', {
+      action: params.action,
+      targetType: params.targetType,
+      error: error.message,
+    })
+  }
 }

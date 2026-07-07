@@ -28,11 +28,14 @@ npx supabase gen types typescript --project-id <project-id> --schema public > li
 Minimikrav före go-live:
 
 - sätt `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL` och `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- sätt server-hemligheterna `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RATE_LIMIT_SECRET` och `IDENTITY_HASH_SECRET` (krävs i produktion; utan `RATE_LIMIT_SECRET` nekas rate-limitade åtgärder)
 - konfigurera Supabase Auth redirect URLs för `/auth/callback`
-- kör migrationerna i `supabase/migrations/` och verifiera Storage-buckets `listing-images` och `profile-documents` samt readiness/rate-limit-funktioner
+- kör migrationerna i `supabase/migrations/` och verifiera Storage-buckets `listing-images`, `profile-documents` och `message-attachments` samt readiness/rate-limit-funktioner
 - aktivera CI: `npm run lint`, `npm run build`, `npm audit --omit=dev --audit-level=moderate`
 - konfigurera e-post, betalning, monitoring och rate limit enligt `.env.example`
-- verifiera `/api/health`, `/robots.txt` och `/sitemap.xml` efter deploy
+- verifiera `/api/health`, `/api/readiness`, `/robots.txt` och `/sitemap.xml` efter deploy
+
+Fullständig checklista: `docs/go-live.md`.
 
 ## Fasstatus i denna leverans
 Detta paket täcker Bovaro upp till produktionsförberedande fas:

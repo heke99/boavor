@@ -13,7 +13,7 @@
 | `RATE_LIMIT_SECRET` | Ja | Hashar rate-limit-subjekt (IP/användare). |
 | `IDENTITY_HASH_SECRET` | Ja | HMAC för personnummer-hash. Byt ALDRIG efter lansering. |
 | `RESEND_API_KEY` + `EMAIL_FROM` | Ja | Verifiera avsändardomänen i Resend först. |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Ja för betalflöden | Skapa produkter/priser, koppla webhook → `/api/webhooks/stripe`. |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Ja för betalflöden | Server-side Checkout (ingen publishable key behövs). Skapa produkter/priser, koppla webhook → `/api/webhooks/stripe`. |
 | `BANKID_*` | Ja för skarp identifiering | RP-certifikat krävs; utan dem visas mock endast i icke-produktion. |
 | `ESIGN_*` | Ja för skarp signering | Utan konfig visas "inte konfigurerad" — aldrig fejkad signering. |
 | `SENTRY_DSN` | Rekommenderas | Serverfel rapporteras via instrumentation-hooken. |

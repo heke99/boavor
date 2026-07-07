@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { canManageApplication, getAuthContext } from '@/lib/auth/permissions'
-import { parseStorageUri } from '@/lib/storage'
+import { PROFILE_DOCUMENTS_BUCKET, parseStorageUri } from '@/lib/storage'
 
 type Params = {
   params: Promise<{ id: string }>
@@ -32,7 +32,9 @@ export async function GET(_request: Request, { params }: Params) {
     }
   }
 
-  const storageRef = parseStorageUri(document.file_url)
+  // Application documents are snapshots of profile documents, so they live
+  // in the profile-documents bucket.
+  const storageRef = parseStorageUri(document.file_url, { allowedBuckets: [PROFILE_DOCUMENTS_BUCKET] })
   if (!storageRef) {
     return NextResponse.redirect(document.file_url)
   }
