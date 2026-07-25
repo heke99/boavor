@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto'
 // Relative import so vitest (no path-alias config) can resolve it too.
 import { maskPiiInText, sanitizeForLog } from '../log'
 
@@ -47,7 +46,7 @@ export function buildSentryEvent(
 ): SentryEvent {
   const err = error instanceof Error ? error : new Error(String(error))
   return {
-    event_id: randomUUID().replace(/-/g, ''),
+    event_id: crypto.randomUUID().replace(/-/g, ''),
     timestamp: new Date().toISOString(),
     platform: 'node',
     level: 'error',

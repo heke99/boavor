@@ -1,0 +1,10 @@
+---
+description: Load and maintain Bovaro project memory
+alwaysApply: true
+---
+
+Read `.agent-memory/README.md`, `current-state.md`, `execution-plan.md`,
+`known-failures.md` and `next-actions.md` before implementation. Update current
+state, completed work, failures, verification matrix and session log after
+material changes. Code and actually executed verification are authoritative.
+

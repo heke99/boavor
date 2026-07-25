@@ -59,47 +59,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'SUPABASE_SERVICE_ROLE_KEY är inte konfigurerad.' }, { status: 503 })
   }
 
-  const { data: contract } = await supabase
-    .from('contracts')
-    .select('id, status')
-    .eq('provider_ref', payload.provider_ref)
-    .maybeSingle()
-
-  if (!contract) {
-    return NextResponse.json({ ok: false, error: 'Okänt kontrakt.' }, { status: 404 })
+  if (!['completed', 'declined'].includes(payload.event)) {
+    return NextResponse.json({ ok: false, error: 'Okänd händelse.' }, { status: 400 })
   }
 
-  if (payload.event === 'completed') {
-    // Mark all signers signed (the provider has confirmed completion), store
-    // the signed PDF reference and finalize atomically.
-    await supabase
-      .from('contract_signers')
-      .update({ status: 'signed', signed_at: new Date().toISOString() })
-      .eq('contract_id', contract.id)
-      .eq('status', 'pending')
-
-    if (payload.signed_pdf_url) {
-      await supabase.from('contracts').update({ signed_pdf_url: payload.signed_pdf_url }).eq('id', contract.id)
-    }
-
-    const { error } = await supabase.rpc('finalize_signed_contract', { p_contract_id: contract.id })
-    if (error) {
-      console.error('Contract finalization failed', error)
-      return NextResponse.json({ ok: false, error: 'Finalisering misslyckades.' }, { status: 500 })
-    }
-
-    return NextResponse.json({ ok: true, contractId: contract.id, finalized: true })
+  const { data, error } = await supabase.rpc('process_signing_callback', {
+    p_provider_reference: payload.provider_ref,
+    p_event: payload.event,
+    p_signed_pdf_url: payload.signed_pdf_url ?? null,
+  })
+  if (error) {
+    console.error('Signing callback processing failed', { message: error.message })
+    const status = error.message.includes('not found') ? 404 : 500
+    return NextResponse.json({ ok: false, error: 'Signeringshändelsen kunde inte behandlas.' }, { status })
   }
-
-  if (payload.event === 'declined') {
-    await supabase.from('contracts').update({ status: 'cancelled' }).eq('id', contract.id)
-    await supabase.from('contract_events').insert({
-      contract_id: contract.id,
-      actor_user_id: null,
-      event_type: 'signing_declined',
-    })
-    return NextResponse.json({ ok: true, contractId: contract.id, cancelled: true })
-  }
-
-  return NextResponse.json({ ok: false, error: 'Okänd händelse.' }, { status: 400 })
+  return NextResponse.json({ ok: true, result: data })
 }

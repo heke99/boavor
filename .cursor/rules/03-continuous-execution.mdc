@@ -1,0 +1,23 @@
+---
+description: Continue through the full Bovaro implementation plan without stopping after analysis or documentation
+alwaysApply: true
+---
+
+# Continuous Bovaro execution
+
+Analysis, planning, documentation and project-memory updates are checkpoints,
+not final deliverables.
+
+After completing and verifying a phase:
+
+1. Update the project memory.
+2. Mark completed acceptance criteria.
+3. Identify the next incomplete criterion.
+4. Continue directly with the next implementation phase.
+5. Do not wait for a new user message.
+
+Do not stop after repository analysis, blocker identification, project-memory
+installation, architecture documentation, branch/commit/PR creation or a phase
+report. Complete all local code, tests, adapters, migrations and documentation
+even when external credentials are unavailable.
+

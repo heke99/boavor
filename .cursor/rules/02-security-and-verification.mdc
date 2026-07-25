@@ -1,0 +1,10 @@
+---
+description: Enforce tenant isolation and honest verification
+alwaysApply: true
+---
+
+Every tenant-owned object requires company scoping, RLS and server permission
+checks. Private files use private buckets and object-relation authorization.
+Never expose service-role credentials to clients. Record exact commands and
+results; use BLOCKED_EXTERNAL for unavailable live providers.
+

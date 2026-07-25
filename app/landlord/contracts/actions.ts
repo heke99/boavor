@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireLandlordAccess } from '@/lib/data/landlord'
 import { canTransition } from '@/lib/applications/status-machine'
 import { renderContractTemplate } from '@/lib/contracts/render'
+import { createContractPdf, sha256Hex } from '@/lib/contracts/pdf'
 import { resolveEsignProvider } from '@/lib/esign/provider'
 
 export async function sendOfferAction(formData: FormData) {
@@ -196,6 +197,38 @@ export async function createContractDraftAction(formData: FormData) {
     return
   }
 
+  if (!application.landlord_company_id) {
+    await supabase.from('contracts').delete().eq('id', contract.id)
+    console.error('Contract draft requires a canonical landlord company')
+    return
+  }
+
+  const pdf = createContractPdf(body)
+  const documentHash = sha256Hex(pdf)
+  const storagePath = `${application.landlord_company_id}/contracts/${contract.id}/v1.pdf`
+  const { error: uploadError } = await supabase.storage
+    .from('contract-documents')
+    .upload(storagePath, Buffer.from(pdf), { contentType: 'application/pdf', upsert: false })
+
+  if (uploadError) {
+    await supabase.from('contracts').delete().eq('id', contract.id)
+    console.error('Failed to store canonical contract PDF', { message: uploadError.message })
+    return
+  }
+
+  const { error: documentError } = await supabase.rpc('register_contract_document', {
+    p_contract_id: contract.id,
+    p_storage_path: storagePath,
+    p_content_hash: documentHash,
+    p_file_size: pdf.byteLength,
+  })
+  if (documentError) {
+    await supabase.storage.from('contract-documents').remove([storagePath])
+    await supabase.from('contracts').delete().eq('id', contract.id)
+    console.error('Failed to register canonical contract document', { message: documentError.message })
+    return
+  }
+
   // Lock the template version after first use (immutability).
   await supabase
     .from('contract_templates')
@@ -246,7 +279,7 @@ export async function createContractDraftAction(formData: FormData) {
 
 /** Sends the contract for signing via the configured e-sign provider. */
 export async function sendContractForSigningAction(formData: FormData) {
-  const { supabase, user } = await requireLandlordAccess()
+  const { supabase } = await requireLandlordAccess()
 
   const contractId = String(formData.get('contractId') ?? '')
   if (!contractId) return
@@ -259,17 +292,23 @@ export async function sendContractForSigningAction(formData: FormData) {
 
   const { data: contract } = await supabase
     .from('contracts')
-    .select('id, status, body_snapshot, contract_signers(full_name, email, signer_role)')
+    .select('id, status, document_hash, document_version_id, contract_signers(full_name, email, signer_role)')
     .eq('id', contractId)
     .maybeSingle()
 
-  if (!contract || !['draft', 'internal_review'].includes(contract.status)) return
+  if (
+    !contract
+    || !contract.document_hash
+    || !contract.document_version_id
+    || !['draft', 'internal_review'].includes(contract.status)
+  ) return
 
   let providerRef: string
   try {
     const created = await resolution.provider.createSigningRequest({
       contractId,
-      documentText: contract.body_snapshot,
+      documentHash: contract.document_hash,
+      documentVersionId: contract.document_version_id,
       signers: (contract.contract_signers ?? []).map((signer) => ({
         fullName: signer.full_name,
         email: signer.email,
@@ -282,17 +321,16 @@ export async function sendContractForSigningAction(formData: FormData) {
     return
   }
 
-  await supabase
-    .from('contracts')
-    .update({ status: 'sent_for_signing', provider: resolution.provider.name, provider_ref: providerRef })
-    .eq('id', contractId)
-
-  await supabase.from('contract_events').insert({
-    contract_id: contractId,
-    actor_user_id: user.id,
-    event_type: 'sent_for_signing',
-    payload: { provider: resolution.provider.name, mock: resolution.provider.isMock },
+  const { error: sessionError } = await supabase.rpc('register_signing_session', {
+    p_contract_id: contractId,
+    p_provider: resolution.provider.name,
+    p_provider_reference: providerRef,
+    p_idempotency_key: `contract:${contractId}:v:${contract.document_version_id}`,
   })
+  if (sessionError) {
+    console.error('Failed to register signing session', { message: sessionError.message })
+    return
+  }
 
   revalidatePath('/dashboard/listings')
 }

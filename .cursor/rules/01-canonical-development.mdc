@@ -1,0 +1,10 @@
+---
+description: Preserve Bovaro canonical domain ownership
+alwaysApply: true
+---
+
+`companies` is the tenant root. Reuse existing profiles, units, listings,
+rental_applications, contracts and support models. Do not add competing domain
+models or duplicate status engines. Money is integer öre. State transitions go
+through canonical SQL functions/services and write domain events atomically.
+

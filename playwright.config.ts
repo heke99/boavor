@@ -18,7 +18,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 45_000,
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
     locale: 'sv-SE',
   },
@@ -34,8 +34,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:3000',
+    command: 'npm run start -- -H 127.0.0.1',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

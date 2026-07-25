@@ -868,8 +868,13 @@ export type Database = {
         Row: {
           application_id: string
           body_snapshot: string
+          company_id: string | null
+          contract_number: string | null
           created_at: string
           created_by: string | null
+          document_hash: string | null
+          document_id: string | null
+          document_version_id: string | null
           id: string
           listing_id: string | null
           provider: string | null
@@ -880,12 +885,18 @@ export type Database = {
           template_id: string | null
           template_version: number | null
           updated_at: string
+          variables_snapshot: Json
         }
         Insert: {
           application_id: string
           body_snapshot: string
+          company_id?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
+          document_hash?: string | null
+          document_id?: string | null
+          document_version_id?: string | null
           id?: string
           listing_id?: string | null
           provider?: string | null
@@ -896,12 +907,18 @@ export type Database = {
           template_id?: string | null
           template_version?: number | null
           updated_at?: string
+          variables_snapshot?: Json
         }
         Update: {
           application_id?: string
           body_snapshot?: string
+          company_id?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
+          document_hash?: string | null
+          document_id?: string | null
+          document_version_id?: string | null
           id?: string
           listing_id?: string | null
           provider?: string | null
@@ -912,6 +929,7 @@ export type Database = {
           template_id?: string | null
           template_version?: number | null
           updated_at?: string
+          variables_snapshot?: Json
         }
         Relationships: [
           {
@@ -4781,6 +4799,82 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_outbox_events: {
+        Args: { p_limit?: number; p_worker_id: string }
+        Returns: Json[]
+      }
+      complete_outbox_event: {
+        Args: { p_error?: string | null; p_event_id: string; p_succeeded: boolean }
+        Returns: undefined
+      }
+      create_maintenance_case: {
+        Args: {
+          p_access_instructions?: string | null
+          p_category: string
+          p_description: string
+          p_tenancy_id: string
+          p_title: string
+          p_urgency: string
+        }
+        Returns: string
+      }
+      current_user_has_company_permission: {
+        Args: { p_company_id: string; p_permission: string }
+        Returns: boolean
+      }
+      get_landlord_lifecycle_bundle: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
+      get_tenant_portal_bundle: { Args: never; Returns: Json }
+      provision_tenancy_from_signed_contract: {
+        Args: { p_contract_id: string }
+        Returns: string
+      }
+      register_contract_document: {
+        Args: {
+          p_content_hash: string
+          p_contract_id: string
+          p_file_size: number
+          p_storage_path: string
+        }
+        Returns: string
+      }
+      register_signing_session: {
+        Args: {
+          p_contract_id: string
+          p_idempotency_key: string
+          p_provider: string
+          p_provider_reference: string
+        }
+        Returns: string
+      }
+      process_signing_callback: {
+        Args: {
+          p_event: string
+          p_provider_reference: string
+          p_signed_pdf_url?: string | null
+        }
+        Returns: Json
+      }
+      register_rent_payment: {
+        Args: {
+          p_amount_ore: number
+          p_idempotency_key: string
+          p_invoice_id: string
+          p_paid_at: string
+          p_reference: string
+        }
+        Returns: string
+      }
+      request_lease_termination: {
+        Args: {
+          p_reason?: string | null
+          p_requested_end_date: string
+          p_tenancy_id: string
+        }
+        Returns: string
+      }
       accept_company_invite: { Args: { p_token: string }; Returns: Json }
       admin_adjust_queue_points: {
         Args: {
@@ -4918,9 +5012,9 @@ export type Database = {
       }
       enqueue_webhook_event: {
         Args: {
-          p_company_id: string
+          p_company_id: string | null
           p_event_type: string
-          p_owner_user_id: string
+          p_owner_user_id: string | null
           p_payload: Json
         }
         Returns: number

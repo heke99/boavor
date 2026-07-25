@@ -30,6 +30,8 @@ test.describe('Åtkomstskydd', () => {
 
   test('dataexport kräver inloggning', async ({ request }) => {
     const response = await request.get('/dashboard/settings/export', { maxRedirects: 0 })
-    expect([302, 307, 401]).toContain(response.status())
+    // Without Supabase environment configuration the route fails closed with
+    // 503; it must never expose an export to the anonymous caller.
+    expect([302, 307, 401, 503]).toContain(response.status())
   })
 })
